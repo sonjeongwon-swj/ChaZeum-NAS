@@ -18,19 +18,36 @@ public static class CzWindow {
  [DllImport("user32",EntryPoint="PostMessageW")] static extern bool Post(IntPtr w,int msg,IntPtr a,IntPtr b);
  [DllImport("advapi32",CharSet=CharSet.Unicode,SetLastError=true)]
  static extern bool LogonUser(string user,string domain,string password,int type,int provider,out SafeAccessTokenHandle token);
- // Isolate only a generated test account on the local CI VM; no external host.
- public static void TestShare(string user,string pass,string share,string marker,bool writable){
+ [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)]
+ struct Resource { public int scope,type,display,usage;public string local,remote,comment,provider; }
+ [DllImport("mpr",CharSet=CharSet.Unicode)] static extern int WNetAddConnection2(ref Resource r,string password,string user,int flags);
+ [DllImport("mpr",CharSet=CharSet.Unicode)] static extern int WNetCancelConnection2(string name,int flags,bool force);
+ // First authenticate a distinct, non-persistent SMB session; on the admin thread
+ // verify the identity Windows reports for a live open handle before trying a write.
+ public static void TestShare(string user,string pass,string share,string marker,bool writable,Action<string> serverIdentity){
    if(!System.Text.RegularExpressions.Regex.IsMatch(share,"^CZtest[a-f0-9]{9}$"))throw new ArgumentException("not a fixture share");
+   string host=Environment.MachineName,account=host+@"\"+user,root=@"\\127.0.0.1\"+share;
    SafeAccessTokenHandle tok;
-   if(!LogonUser(user,Environment.MachineName,pass,9,3,out tok))throw new Exception("Cannot prepare local test identity");
-   using(tok){WindowsIdentity.RunImpersonated(tok,delegate{
-     string root=@"\\127.0.0.1\"+share;
-     if(File.ReadAllText(Path.Combine(root,"check.txt"))!=marker)throw new Exception("NAS user could not reopen fixture contents");
-     string dst=Path.Combine(root,"check-role-"+Guid.NewGuid().ToString("N")+".txt");bool rejected=false;
-     try{File.WriteAllText(dst,marker);}catch(UnauthorizedAccessException){rejected=true;}
-     if(writable==rejected)throw new Exception("NAS write permission mismatch");
-     if(writable){if(File.ReadAllText(dst)!=marker)throw new Exception("NAS write/reopen mismatch");File.Delete(dst);}
-   });}
+   if(!LogonUser(user,host,pass,9,3,out tok))throw new Exception("Cannot prepare local test identity");
+   using(tok){
+     bool connected=false;FileStream held=null;
+     try{
+       held=WindowsIdentity.RunImpersonated(tok,delegate{
+         var net=new Resource{type=1,remote=root};int rc=WNetAddConnection2(ref net,pass,account,4);
+         if(rc!=0)throw new Exception("Cannot establish explicit fixture SMB session: "+rc);connected=true;
+         return new FileStream(Path.Combine(root,"check.txt"),FileMode.Open,FileAccess.Read,FileShare.ReadWrite);
+       });
+       serverIdentity(account);
+       WindowsIdentity.RunImpersonated(tok,delegate{
+         if(File.ReadAllText(Path.Combine(root,"check.txt"))!=marker)throw new Exception("NAS user could not reopen fixture contents");
+         string dst=Path.Combine(root,"check-role-"+Guid.NewGuid().ToString("N")+".txt");bool rejected=false;
+         try{File.WriteAllText(dst,marker);}catch(UnauthorizedAccessException){rejected=true;}
+         if(writable==rejected)throw new Exception((writable?"write unexpectedly denied":"read-only write unexpectedly allowed")+" with confirmed SMB identity");
+         if(writable){if(File.ReadAllText(dst)!=marker)throw new Exception("NAS write/reopen mismatch");File.Delete(dst);}
+       });
+     }finally{if(held!=null)held.Dispose();
+       if(connected)WindowsIdentity.RunImpersonated(tok,delegate{int rc=WNetCancelConnection2(root,0,false);if(rc!=0&&rc!=2250)throw new Exception("Cannot close own test session: "+rc);});}
+   }
  }
  public static IntPtr FindOwned(int pid,string cls){var h=FindWindow(cls,null);uint actual;GetWindowThreadProcessId(h,out actual);return actual==pid?h:IntPtr.Zero;}
  public static IntPtr Item(IntPtr w,int id){var b=GetDlgItem(w,id);if(b==IntPtr.Zero)throw new Exception("Missing control "+id);return b;}

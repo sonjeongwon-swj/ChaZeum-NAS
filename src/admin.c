@@ -114,7 +114,10 @@ static int readback(T name,T tag,T path){
  int exact=ours&&(!path||eq(actual->path,path));NetApiBufferFree(actual);
  return exact;
 }
-int shareaction(T name,T path,int remove,T expected,W*out,int cap){if(!shareok(name))return WHY("공유 이름을 입력하세요. 한글·영문·숫자·공백·밑줄·붙임표를 쓸 수 있습니다.");if(!remove){
+static void (*shareObserver)(unsigned phase);
+void watchshare(void (*fn)(unsigned)){shareObserver=fn;}
+static void phase(unsigned i){if(shareObserver)shareObserver(i);}
+int shareaction(T name,T path,int remove,T expected,W*out,int cap){phase(1);if(!shareok(name))return WHY("공유 이름을 입력하세요. 한글·영문·숫자·공백·밑줄·붙임표를 쓸 수 있습니다.");if(!remove){
  if(rootpath(path)){VolumePick check={0};
   if(!expected||!*expected||!candidate(path,&check)||!eq(check.id,expected))return WHY("선택한 데이터 드라이브를 다시 확인하세요. 드라이브 목록을 새로 고친 뒤 다시 선택해 주세요.");}
  else if(expected&&*expected)return WHY("드라이브와 선택한 위치가 다릅니다. 위치를 다시 선택하세요.");
@@ -122,16 +125,16 @@ int shareaction(T name,T path,int remove,T expected,W*out,int cap){if(!shareok(n
  W tag[64],r[30],w[30];Share502*old=0;U32 rc=NetShareGetInfo(0,name,502,(U8**)&old);W real[260];if(remove){if(rc||!old)return WHY("이름과 일치하는 공유를 찾지 못했습니다.");int owned=validtag(old->comment)&&cp(tag,CNT(tag),old->comment)&&cp(real,CNT(real),old->path);NetApiBufferFree(old);if(!owned)return WHY("5.0이 만든 공유만 해제할 수 있습니다.");path=real;}else{if(!rc){cp(out,cap,old&&validtag(old->comment)&&old->path&&eq(old->path,path)?L"이 위치는 같은 이름으로 이미 등록되어 있습니다. ‘3. 아이디·권한’으로 가세요.":L"이 이름을 기존 Windows 공유가 사용 중입니다. 기존 설정은 바꾸지 않았습니다.");if(old){showshare(out,cap,name,old->path);NetApiBufferFree(old);}return 0;}if(rc!=2310)return errnum(out,cap,L"공유 상태 확인 실패",rc);if(!available(path,out,cap))return 0;cp(tag,CNT(tag),head);if(!guidtext(tag+12,40))return 0;}
 if(!names(tag,r,w))return WHY("공유 식별자를 만들 수 없습니다.");H h=folder(path);if(!h&&!remove)return WHY("로컬 NTFS 데이터 드라이브나 일반 폴더를 선택하세요. 시스템 영역·연결 지점은 제외됩니다.");if(!remove&&rootpath(path)&&!samevolume(expected,h)){CloseHandle(h);return WHY("선택한 드라이브와 현재 열린 디스크가 다릅니다. 공유하지 않았습니다.");}
 U8 rs[128],ws[128];int gr=0,gw=0,fs=0,added=0,invalid=0;H sd=0;W *rsid=0,*wsid=0;
-if(remove){if(!groupOwn(r,tag)||!groupOwn(w,tag)||!namedSID(r,rs)||!namedSID(w,ws)){if(h)CloseHandle(h);return WHY("권한 그룹 소유권을 확인하지 못했습니다.");}rc=NetShareDel(0,name,0);if(!rc){int dirty=!h||fsrights(h,rs,ws,1)!=0;U32 a=NetLocalGroupDel(0,r),b=NetLocalGroupDel(0,w);if(h)CloseHandle(h);if(dirty||a||b)return WHY("공유는 해제했습니다. 폴더 또는 그룹의 권한 정리는 확인이 필요합니다.");return cp(out,cap,L"공유를 해제했습니다. 폴더와 파일은 그대로 있습니다.");}if(h)CloseHandle(h);return errnum(out,cap,L"공유 해제 실패",rc);}
-rc=gmake(r,tag);if(rc)goto done;gr=1;rc=gmake(w,tag);if(rc)goto done;gw=1;
+if(remove){phase(7);if(!groupOwn(r,tag)||!groupOwn(w,tag)||!namedSID(r,rs)||!namedSID(w,ws)){if(h)CloseHandle(h);return WHY("권한 그룹 소유권을 확인하지 못했습니다.");}rc=NetShareDel(0,name,0);if(!rc){int dirty=!h||fsrights(h,rs,ws,1)!=0;U32 a=NetLocalGroupDel(0,r),b=NetLocalGroupDel(0,w);if(h)CloseHandle(h);if(dirty||a||b)return WHY("공유는 해제했습니다. 폴더 또는 그룹의 권한 정리는 확인이 필요합니다.");return cp(out,cap,L"공유를 해제했습니다. 폴더와 파일은 그대로 있습니다.");}if(h)CloseHandle(h);return errnum(out,cap,L"공유 해제 실패",rc);}
+phase(2);rc=gmake(r,tag);if(rc)goto done;gr=1;rc=gmake(w,tag);if(rc)goto done;gw=1;
 if(!namedSID(r,rs)||!namedSID(w,ws)||!ConvertSidToStringSidW(rs,&rsid)||!ConvertSidToStringSidW(ws,&wsid)){rc=GetLastError();if(!rc)rc=1332;goto done;}
-W sddl[550];_snwprintf(sddl,CNT(sddl),L"D:P(A;;FA;;;BA)(A;;0x1200a9;;;%ls)(A;;0x1301bf;;;%ls)",rsid,wsid);if(!ConvertStringSecurityDescriptorToSecurityDescriptorW(sddl,1,&sd,0)){rc=GetLastError();goto done;}rc=fsrights(h,rs,ws,0);if(rc)goto done;fs=1;
-Share502 sh={0};sh.name=(W*)name;sh.comment=tag;sh.path=(W*)path;sh.max=0xffffffff;sh.sd=sd;rc=NetShareAdd(0,502,(U8*)&sh,0);if(rc)goto done;added=1;
+W sddl[550];_snwprintf(sddl,CNT(sddl),L"D:P(A;;FA;;;BA)(A;;0x1200a9;;;%ls)(A;;0x1301bf;;;%ls)",rsid,wsid);if(!ConvertStringSecurityDescriptorToSecurityDescriptorW(sddl,1,&sd,0)){rc=GetLastError();goto done;}phase(3);rc=fsrights(h,rs,ws,0);if(rc)goto done;fs=1;
+phase(4);Share502 sh={0};sh.name=(W*)name;sh.comment=tag;sh.path=(W*)path;sh.max=0xffffffff;sh.sd=sd;rc=NetShareAdd(0,502,(U8*)&sh,0);if(rc)goto done;added=1;
 /* 1005 is SHARE_INFO_1005: enforce encryption and access-based enumeration. */
-Flags fl={0x8000|0x0800|0x30};rc=NetShareSetInfo(0,name,1005,(U8*)&fl,0);if(!rc){Flags*live=0;rc=NetShareGetInfo(0,name,1005,(U8**)&live);if(!rc){if((live->flags&0x8800)!=0x8800)rc=5;NetApiBufferFree(live);}}
+phase(5);Flags fl={0x8000|0x0800|0x30};rc=NetShareSetInfo(0,name,1005,(U8*)&fl,0);if(!rc){Flags*live=0;rc=NetShareGetInfo(0,name,1005,(U8**)&live);if(!rc){if((live->flags&0x8800)!=0x8800)rc=5;NetApiBufferFree(live);}}
 if(!rc&&!readback(name,tag,path))rc=13;
 if(!rc&&rootpath(path)){VolumePick now={0};if(!candidate(path,&now)||!eq(expected,now.id))rc=15;}
-done:if(rc||!added){if(added&&(!readback(name,tag,0)||NetShareDel(0,name,0)))invalid=1;if(fs&&fsrights(h,rs,ws,1))invalid=1;if(gw&&NetLocalGroupDel(0,w))invalid=1;if(gr&&NetLocalGroupDel(0,r))invalid=1;}if(sd)LocalFree(sd);if(rsid)LocalFree(rsid);if(wsid)LocalFree(wsid);CloseHandle(h);if(invalid)return WHY("설정 실패 후 정리가 모두 끝나지 않았습니다. 서버 목록과 Windows 권한을 확인하세요.");if(rc||!added)return errnum(out,cap,L"공유를 만들지 못했습니다. 이번 변경을 되돌렸습니다.",rc);cp(out,cap,rootpath(path)?L"드라이브 전체를 공유했습니다: ":L"폴더를 공유했습니다: ");cat(out,cap,path);cat(out,cap,L"\r\n공유 이름: ");cat(out,cap,name);cat(out,cap,L"\r\n다음: ‘3. 아이디·권한’에서 누가 읽거나 쓸 수 있는지 정하세요.");return 1;}
+done:if(rc||!added){phase(6);if(added&&(!readback(name,tag,0)||NetShareDel(0,name,0)))invalid=1;if(fs&&fsrights(h,rs,ws,1))invalid=1;if(gw&&NetLocalGroupDel(0,w))invalid=1;if(gr&&NetLocalGroupDel(0,r))invalid=1;}if(sd)LocalFree(sd);if(rsid)LocalFree(rsid);if(wsid)LocalFree(wsid);CloseHandle(h);if(invalid)return WHY("설정 실패 후 정리가 모두 끝나지 않았습니다. 서버 목록과 Windows 권한을 확인하세요.");if(rc||!added)return errnum(out,cap,L"공유를 만들지 못했습니다. 이번 변경을 되돌렸습니다.",rc);cp(out,cap,rootpath(path)?L"드라이브 전체를 공유했습니다: ":L"폴더를 공유했습니다: ");cat(out,cap,path);cat(out,cap,L"\r\n공유 이름: ");cat(out,cap,name);cat(out,cap,L"\r\n다음: ‘3. 아이디·권한’에서 누가 읽거나 쓸 수 있는지 정하세요.");return 1;}
 typedef struct {W*client,*user;U32 seconds,idle;} Session10;
 extern U32 NetSessionEnum(T,T,T,U32,U8**,U32,U32*,U32*,U32*),NetSessionDel(T,T,T);
 static int closeuser(T user){Session10*ss=0;U32 count=0,total=0,res=0,ret=NetSessionEnum(0,0,0,10,(U8**)&ss,0xffffffff,&count,&total,&res);if(ret)return 0;int all=1;W pc[16],full[64];U32 len=16;full[0]=0;if(GetComputerNameW(pc,&len))_snwprintf(full,CNT(full),L"%ls\\%ls",pc,user);for(U32 i=0;i<count;i++){if(!ss[i].user||(!eq(user,ss[i].user)&&!eq(full,ss[i].user)))continue;U32 rv=NetSessionDel(0,ss[i].client,ss[i].user);if(rv&&rv!=2312)all=0;}if(ss)NetApiBufferFree(ss);return all;}

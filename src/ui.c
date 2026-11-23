@@ -66,6 +66,17 @@ cp(text,CNT(text),rootpath(path)?L"이 드라이브 전체를 공유할까요?":
 }
 #endif
 #if SERVER
+extern uintptr_t SetTimer(H,uintptr_t,U32,H);extern I32 KillTimer(H,uintptr_t);
+static unsigned stage;static U64 since;
+static void postphase(unsigned value){PostMessageW(win,0x8002,value,0);}
+static void reportstage(void){
+ static T stages[]={L"공유 작업을 시작합니다.",L"선택한 드라이브와 기존 공유를 확인하고 있습니다.",L"읽기·쓰기 전용 Windows 그룹을 만들고 있습니다.",
+ L"Windows가 폴더와 하위 파일에 권한을 적용하고 있습니다. 파일이 많으면 오래 걸릴 수 있습니다.",L"Windows에 공유 이름을 등록하고 있습니다.",
+ L"등록된 공유의 경로와 보안 설정을 다시 확인하고 있습니다.",L"이번에 적용한 변경을 되돌리고 있습니다.",L"공유를 해제하고 이 앱이 추가했던 권한을 정리하고 있습니다."};
+ U32 secs=(U32)((GetTickCount64()-since)/1000);W b[480],time[108]={0};cp(b,CNT(b),stages[stage<CNT(stages)?stage:0]);
+ _snwprintf(time,CNT(time),L"\r\n경과: %u분 %u초",secs/60,secs%60);cat(b,CNT(b),time);
+ cat(b,CNT(b),L"  ·  완료 메시지가 나올 때까지 PC를 켜 두세요.");speak(b);
+}
 static H dashboard;
 static void refreshdash(void){W b[640];if(np==5 && dashboard){server_snapshot(b,CNT(b));SetWindowTextW(dashboard,b);}}
 #endif
@@ -184,8 +195,17 @@ if(id==ADD)cp(job.volume,CNT(job.volume),pickedVolume);
 #endif
 for(int i=0;i<4;i++)if(field[i]&&!val(i,job.v[i],CNT(job.v[i]))){speak(L"입력값이 너무 깁니다.");erase(&job,sizeof(job));return;}
 if(id==SAVE){if(!cp(job.e.host,CNT(job.e.host),job.v[0])||!cp(job.e.ip,CNT(job.e.ip),job.v[1])||!cp(job.e.machine,CNT(job.e.machine),job.v[2])){erase(&job,sizeof(job));speak(L"서버 주소 또는 PC 이름의 길이를 확인하세요.");return;}}
-job.choice=field[3]?(int)SendMessageW(field[3],0x147,0,0):-1;job.home=checked(4);if(id==USER||id==PWRESET||id==VPN||id==MAP)pre(1,L"");if(id==VPN)pre(2,L"");busy=1;for(int i=0;i<nk;i++)if(kids[i]!=status)EnableWindow(kids[i],0);speak(L"확인 중입니다…");H thread=CreateThread(0,0,dowork,0,0,0);if(thread)CloseHandle(thread);else {erase(&job,sizeof(job));PostMessageW(win,0x8001,0,0);cp(message,CNT(message),L"작업을 시작하지 못했습니다.");}}
-static N proc(H h,U32 m,uintptr_t w,N l){if(m==0x111){int i=(int)(w&65535);
+job.choice=field[3]?(int)SendMessageW(field[3],0x147,0,0):-1;job.home=checked(4);if(id==USER||id==PWRESET||id==VPN||id==MAP)pre(1,L"");if(id==VPN)pre(2,L"");busy=1;for(int i=0;i<nk;i++)if(kids[i]!=status)EnableWindow(kids[i],0);speak(L"확인 중입니다…");
+#if SERVER
+if(id==ADD||id==REMOVE){stage=0;since=GetTickCount64();reportstage();SetTimer(win,1,2000,0);}
+#endif
+H thread=CreateThread(0,0,dowork,0,0,0);if(thread)CloseHandle(thread);else {erase(&job,sizeof(job));PostMessageW(win,0x8001,0,0);cp(message,CNT(message),L"작업을 시작하지 못했습니다.");}}
+static N proc(H h,U32 m,uintptr_t w,N l){
+#if SERVER
+if((m==0x8002||(m==0x113&&w==1))&&busy&&(lastop==ADD||lastop==REMOVE)){if(m==0x8002)stage=(unsigned)w;reportstage();return 0;}
+if(m==0x8001&&(lastop==ADD||lastop==REMOVE))KillTimer(h,1);
+#endif
+if(m==0x111){int i=(int)(w&65535);
 #if SERVER
 if(i==405&&(w>>16)==1&&np==1&&!busy&&field[5]&&(H)l==field[5]){pickwhole();return 0;}
 #endif
@@ -204,7 +224,7 @@ tray_event(h,m,l);if(m==2)tray_done(h);
 if(m==0x10&&busy){MessageBoxW(h,L"작업이 끝나면 닫을 수 있습니다.",PRODUCT,0x40);return 0;}if(m==2){PostQuitMessage(0);return 0;}return DefWindowProcW(h,m,w,l);}
 void start(void){inst=GetModuleHandleW(0);CoInitializeEx(0,2);verified=trusted();
 #if SERVER
-tray_init();T title=TITLE_SERVER;loadendpoint(HKLM,SRVKEY,&known);
+watchshare(postphase);tray_init();T title=TITLE_SERVER;loadendpoint(HKLM,SRVKEY,&known);
 #else
 T title=TITLE_CLIENT;loadendpoint(HKCU,CLIKEY,&known);int argc=0;W**av=CommandLineToArgvW(GetCommandLineW(),&argc);int autoRun=av&&argc==2&&eq(av[1],L"/reconnect");if(av)LocalFree(av);if(autoRun){H sync=CreateMutexW(0,1,L"Local\\ChaZeumNAS5Reconnect");if(!sync||GetLastError()==183)ExitProcess(0);W report[3800];Sleep(3000);int ok=restore(report,CNT(report));extern int transient5(void);for(int i=0;!ok&&i<2&&transient5();i++){Sleep(i?20000:7000);ok=restore(report,CNT(report));}putstr(HKCU,CLIKEY,L"LastAuto",report);ReleaseMutex(sync);CloseHandle(sync);ExitProcess(ok?0:1);}
 #endif

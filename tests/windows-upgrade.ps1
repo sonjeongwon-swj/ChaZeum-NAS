@@ -92,11 +92,23 @@ try {
  $marker=[Guid]::NewGuid().ToString()
  [IO.File]::WriteAllText($unc,$marker)
  if([IO.File]::ReadAllText($unc) -cne $marker){throw 'SMB saved contents changed after closing UI'}
- [CzWindow]::TestShare($nasId,$testPassword,$share,$marker,$false)
+ $identityCheck=[Action[string]]{
+   param($expectedName)
+   $client=Wait-Cz {
+    $names=@(Get-SmbOpenFile | Where-Object { $_.Path -eq (Join-Path $folder 'check.txt') } | ForEach-Object ClientUserName)
+    if($names -contains $expectedName){$expectedName}
+   } 'server did not report the NAS test identity for the open SMB file'
+   Write-Host "PASS authenticated SMB identity: $client"
+ }
+ $aclReport=Get-SmbShareAccess -Name $share | Select-Object AccountName,AccessControlType,AccessRight
+ $aclReport | Format-Table | Out-String | Write-Host
+ $groups=Get-LocalGroup | Where-Object { $_.Description -eq $s.Description }
+ foreach($g in $groups){$members=@(Get-LocalGroupMember $g.Name | ForEach-Object Name);Write-Host $g.Name ($members -join ',')}
+ [CzWindow]::TestShare($nasId,$testPassword,$share,$marker,$false,$identityCheck)
  Open-Cz $server 'ChazeumNAS5Server';Control-Cz 507;Tab-Cz 102 209
  [CzWindow]::Set($win,400,$nasId);[CzWindow]::Set($win,402,$share);[CzWindow]::Index($win,403,2)
  [CzWindow]::Click($win,209);Allow-Cz;Result-Cz '권한을 저장했습니다';Stop-Cz
- [CzWindow]::TestShare($nasId,$testPassword,$share,$marker,$true)
+ [CzWindow]::TestShare($nasId,$testPassword,$share,$marker,$true,$identityCheck)
  'PASS Korean NAS ID: allowed read/denied write and then allowed write/reopen with both management windows closed; overlap diagnosis named the existing share.'
  # Simulate a subsequent same-location overwrite; ensure existing ACL and content survive.
  $fixed=Join-Path $tempDir 'Chazeum-NAS_SERVER.exe'

@@ -45,8 +45,12 @@ U32 NetShareSetInfo(T server,T name,U32 level,U8*p,U32*err){(void)server;(void)n
 U32 NetShareDel(T server,T name,U32 zero){(void)server;(void)name;CHECK(!zero);shareDels++;if(!failDelete)liveShare=0;return failDelete?5:0;}
 static void reset(void){groups=groupAdds=groupDels=aclGrants=aclRevokes=shareAdds=shareDels=opened=closed=0;failGroup=failAcl=failShare=failFlags=omitEncrypt=failDelete=overlap=exists=reparse=0;owned=ntfs=1;aliasedLetter=liveShare=wrongPath=wrongOwner=missingABE=0;letterSwap=handleSwap=shortRoot=dosAlias=systemAlias=0;diskKind=3;wanted=existingPath=L"D:\\Data";driveMask=(1u<<2)|(1u<<3)|(1u<<4)|(1u<<25);recordedError=liveFlags=enumFailure=specialShare=volumeError=0;}
 static int create(void){return shareaction(L"자료",L"D:\\Data",0,0,out,CNT(out));}
-int main(void){
+static unsigned phases[20],phaseCount;
+static void observe(unsigned n){if(phaseCount<20)phases[phaseCount++]=n;}
+int main(void){watchshare(observe);
+
 reset();CHECK(create());CHECK(groups==2&&aclGrants==1&&!aclRevokes&&shareAdds==1&&!shareDels&&opened==closed);
+CHECK(phaseCount==5&&phases[0]==1&&phases[2]==3&&phases[4]==5);watchshare(0);
 reset();failGroup=1;CHECK(!create());CHECK(recordedError==2223&&!groups&&!groupDels&&!shareAdds&&opened==closed);
 reset();failGroup=2;CHECK(!create());CHECK(recordedError==2223&&!groups&&groupDels==1&&!shareAdds&&opened==closed);
 reset();failAcl=1;CHECK(!create());CHECK(!groups&&groupDels==2&&!shareAdds&&!aclRevokes&&opened==closed);

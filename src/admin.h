@@ -12,5 +12,6 @@ extern U32 GetFinalPathNameByHandleW(H,W*,U32,U32),GetWindowsDirectoryW(W*,U32),
 int cmdlet(T,W*,int);int listip(W*,int);int islocal(T);
 typedef struct { W root[4],id[72],label[64]; } VolumePick;
 int datavolumes(VolumePick*,int);
+void watchshare(void (*fn)(unsigned));
 int shareaction(T,T,int,T,W*,int);int rights(T,T,int,W*,int);int inventory(W*,int);int firewall(T,T,W*,int);int dropsessions(T,W*,int);
 int subnet(T);int choices(int,W*,int);int byuser(T,W*,int);

@@ -49,7 +49,10 @@ H LoadCursorW(H a,T b){(void)a;(void)b;return (H)1;}U16 RegisterClassExW(Class*a
 I32 ShowWindow(H a,I32 b){(void)a;(void)b;return 1;}I32 UpdateWindow(H a){(void)a;return 1;}I32 GetMessageW(Msg*a,H b,U32 c,U32 d){(void)a;(void)b;(void)c;(void)d;return 0;}I32 IsDialogMessageW(H a,Msg*b){(void)a;(void)b;return 0;}I32 TranslateMessage(Msg*a){(void)a;return 1;}N DispatchMessageW(Msg*a){(void)a;return 0;}N DefWindowProcW(H a,U32 b,uintptr_t c,N d){(void)a;(void)b;(void)c;(void)d;return 0;}void PostQuitMessage(I32 a){(void)a;}
 void ExitProcess(U32 c){quitcode=c;longjmp(escape,1);}
 #if SERVER
-static int settingCalls,lastMode;
+static int settingCalls,lastMode;void watchshare(void (*fn)(unsigned)){(void)fn;}
+U64 GetTickCount64(void){return 1000;}
+uintptr_t SetTimer(H a,uintptr_t b,U32 c,H d){(void)a;(void)c;(void)d;return b;}
+I32 KillTimer(H a,uintptr_t b){(void)a;(void)b;return 1;}
 int server_snapshot(W*b,int n){return cp(b,n,L"test snapshot");}int server_service(int mode,W*b,int n){settingCalls++;lastMode=mode;return cp(b,n,L"test result");}
 void tray_init(void){}void tray_done(H h){(void)h;}void tray_event(H h,U32 m,N l){(void)h;(void)m;(void)l;}int tray_hide(H h){(void)h;return 0;}
 int choices(int a,W*b,int c){(void)a;return cp(b,c,L"");}int byuser(T a,W*b,int c){(void)a;(void)b;(void)c;return 1;}
