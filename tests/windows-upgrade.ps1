@@ -30,6 +30,11 @@ function Stop-Cz(){
  if(-not $app.CloseMainWindow() -or -not $app.WaitForExit(10000) -or $app.ExitCode -ne 0){throw 'Window did not close normally'}
  $app.Dispose();$script:app=$null
 }
+function LoginCommand-Cz {
+ $k=[Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\Microsoft\Windows\CurrentVersion\Run')
+ if($null -eq $k){return $null}
+ try{return $k.GetValue('ChaZeumNAS5',$null)}finally{$k.Close()}
+}
 function Control-Cz([int]$id){ $null=Wait-Cz { [CzWindow]::GetDlgItem($win,$id) -ne [IntPtr]::Zero } "control $id" }
 function Tab-Cz([int]$id,[int]$child){[CzWindow]::Click($win,$id);Control-Cz $child}
 function Allow-Cz(){
@@ -48,13 +53,14 @@ try {
  [CzWindow]::Set($win,400,'nas.example.invalid');[CzWindow]::Set($win,401,'192.168.7.24');[CzWindow]::Set($win,402,'TEST-NAS')
  [CzWindow]::Click($win,203);Result-Cz '서버 주소를 저장했습니다'
  Tab-Cz 103 219;[CzWindow]::Click($win,219);Allow-Cz
- $null=Wait-Cz { $v=Get-ItemPropertyValue -Path $runKey -Name ChaZeumNAS5 -ErrorAction SilentlyContinue; $v -like '*Client-*.exe*' } 'old startup copy'
+ Result-Cz '다음 Windows 로그인 때'
+ $null=Wait-Cz { (LoginCommand-Cz) -like '*Client-*.exe*' } 'old startup copy'
  Stop-Cz
  # Synthetic saved letter, no credential or outside connection is created for it.
  New-ItemProperty $clientKey -Name 'Drive-X' -Value $mapSpec -Force | Out-Null
  Copy-Item 'unsigned/Chazeum-NAS_USER.exe' $oldPair -Force
  Open-Cz $oldPair 'ChazeumNAS5Client';Allow-Cz;Control-Cz 216
- $null=Wait-Cz { (Get-ItemPropertyValue $runKey -Name ChaZeumNAS5) -eq ('"'+$oldPair+'" /reconnect') } 'migration to stable path'
+ $null=Wait-Cz { (LoginCommand-Cz) -eq ('"'+$oldPair+'" /reconnect') } 'migration to stable path'
  if((Get-ItemPropertyValue $clientKey -Name Pair) -cne $pairSpec -or (Get-ItemPropertyValue $clientKey -Name 'Drive-X') -cne $mapSpec){throw 'Saved settings changed'}
  Tab-Cz 100 203
  if([CzWindow]::Read($win,400) -cne 'nas.example.invalid' -or [CzWindow]::Read($win,401) -cne '192.168.7.24'){throw 'New client failed to load old address'}
@@ -106,7 +112,8 @@ try {
  if($null -ne $app){if(-not $app.HasExited){$app.Kill();$app.WaitForExit()};$app.Dispose()}
  if($registered -and (Get-SmbShare -Name $share -ErrorAction SilentlyContinue)){Remove-SmbShare -Name $share -Force}
  if($madeUser){Remove-LocalUser -Name $nasId -ErrorAction SilentlyContinue}
- Remove-ItemProperty -LiteralPath $runKey -Name ChaZeumNAS5 -ErrorAction SilentlyContinue
+ $k=[Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\Microsoft\Windows\CurrentVersion\Run',$true)
+ if($k){try{$k.DeleteValue('ChaZeumNAS5',$false)}finally{$k.Close()}}
  if(Test-Path $clientKey){Remove-Item -LiteralPath $clientKey -Recurse}
  if(Test-Path $tempDir){Remove-Item -LiteralPath $tempDir -Force -Recurse}
 }
