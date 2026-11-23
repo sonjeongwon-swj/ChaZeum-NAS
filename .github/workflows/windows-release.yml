@@ -41,8 +41,63 @@ jobs:
           path: unsigned/
           if-no-files-found: error
           retention-days: 7
-  sign:
+  windows_ui:
+    name: Open both apps on Windows
     needs: build
+    runs-on: windows-2022
+    timeout-minutes: 6
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: reviewed-unsigned-input
+          path: unsigned
+      - name: Verify both main windows and the first screen; close the apps normally
+        shell: pwsh
+        env:
+          PRODUCT_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Add-Type -TypeDefinition @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class GuiProbe {
+            [DllImport("user32.dll", CharSet=CharSet.Unicode, ExactSpelling=true)]
+            public static extern IntPtr FindWindowExW(IntPtr parent, IntPtr after, string windowClass, string title);
+          }
+          '@
+          $roles = @(
+            @{ exe='ChaZeumServer.exe'; role='서버용'; button='공유 추가' },
+            @{ exe='ChaZeumClient.exe'; role='유저용'; button='서버 주소 저장' }
+          )
+          foreach ($item in $roles) {
+            $title = "차즘 NAS $env:PRODUCT_VERSION · $($item.role)"
+            $app = Start-Process -FilePath (Resolve-Path (Join-Path unsigned $item.exe)).Path -PassThru
+            try {
+              $timer = [Diagnostics.Stopwatch]::StartNew()
+              $ready = $false
+              do {
+                $app.Refresh()
+                if ($app.HasExited) { throw "$($item.exe) exited early: $($app.ExitCode)" }
+                $window = $app.MainWindowHandle
+                if (($window -ne [IntPtr]::Zero) -and ($app.MainWindowTitle -ceq $title)) {
+                  $button = [GuiProbe]::FindWindowExW($window, [IntPtr]::Zero, 'Button', $item.button)
+                  if ($button -ne [IntPtr]::Zero) { $ready = $true; break }
+                }
+                Start-Sleep -Milliseconds 200
+              } while ($timer.Elapsed.TotalSeconds -lt 30)
+              if (-not $ready) { throw "$($item.exe): expected window and first-screen control were not found; title: $($app.MainWindowTitle)" }
+              if (-not $app.CloseMainWindow() -or -not $app.WaitForExit(10000)) { throw "$($item.exe) did not close normally" }
+              if ($app.ExitCode -ne 0) { throw "$($item.exe) exited with $($app.ExitCode)" }
+              "PASS: $($item.exe) displayed $title and '$($item.button)', then exited with code 0."
+            } finally {
+              if (-not $app.HasExited) { $app.Kill(); $null = $app.WaitForExit(5000) }
+              $app.Dispose()
+            }
+          }
+  sign:
+    needs: [build, windows_ui]
     # No signing request for pushes, PRs, unprotected refs or before real enrollment.
     if: github.event_name == 'workflow_dispatch' && github.ref_type == 'tag' && github.ref_protected && vars.SIGNPATH_ENABLED == 'true'
     runs-on: windows-2022
