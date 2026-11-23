@@ -1,4 +1,8 @@
 #include "base.h"
+extern H LoadImageW(H,T,U32,int,int,U32);
+extern int GetSystemMetrics(int);
+H brandicon(H inst,int small){return LoadImageW(inst,(T)(N)101,1,GetSystemMetrics(small?49:11),GetSystemMetrics(small?50:12),0x8000);}
+
 int getstr(H root,T key,T name,W*out,int cap){U32 bytes=cap*2;out[0]=0;if(RegGetValueW(root,key,name,2,0,out,&bytes)||bytes<2||bytes>(U32)cap*2||out[bytes/2-1]){out[0]=0;return 0;}return 1;}
 int putstr(H r,T k,T n,T v){H h=0;if(RegCreateKeyExW(r,k,0,0,0,2,0,&h,0))return 0;U32 e=RegSetValueExW(h,n,0,1,(const U8*)v,(sz(v)+1)*2);RegCloseKey(h);return !e;}
 int delstr(H r,T k,T n){H h=0;U32 e=RegOpenKeyExW(r,k,0,2,&h);if(e)return e==2;e=RegDeleteValueW(h,n);RegCloseKey(h);return !e||e==2;}

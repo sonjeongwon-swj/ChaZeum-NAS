@@ -10,7 +10,7 @@ static T wanted=L"D:\\Data", existingPath=L"D:\\Data";static int aliasedLetter,l
 static T volumeD=L"\\\\?\\Volume{00000000-0000-0000-0000-000000000001}\\",volumeE=L"\\\\?\\Volume{00000000-0000-0000-0000-000000000002}\\",volumeOS=L"\\\\?\\Volume{00000000-0000-0000-0000-000000000003}\\";
 I32 CompareStringOrdinal(T a,I32 x,T b,I32 y,I32 ignore){(void)ignore;if(x!=y)return 1;for(int i=0;i<x;i++){W left=a[i],right=b[i];if(left>='a'&&left<='z')left-=32;if(right>='a'&&right<='z')right-=32;if(left!=right)return 1;}return 2;}
 U32 GetLogicalDrives(void){return driveMask;}
-static U32 recordedError,liveFlags;static W openedPath[260],out[2048];
+static U32 enumFailure,specialShare,volumeError;static U32 recordedError,liveFlags;static W openedPath[260],out[2048];
 static W appTag[]=L"ChaZeumNAS5:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 #define CHECK(x) do { checks++; if(!(x)){fprintf(stderr,"share regression line %d: %s\n",__LINE__,#x);exit(1);} } while(0)
 int _snwprintf(W*b,size_t cap,T fmt,...){va_list ap;va_start(ap,fmt);size_t n=0;for(;*fmt&&n+1<cap;fmt++){if(*fmt!='%'){b[n++]=*fmt;continue;}fmt++;int prec=0,limit=0;while(*fmt=='.'||(*fmt>='0'&&*fmt<='9')){if(*fmt=='.')prec=1;else limit=limit*10+*fmt-'0';fmt++;}if(*fmt=='l'&&fmt[1]=='s'){fmt++;T v=va_arg(ap,T);int count=0;while(*v&&n+1<cap&&(!prec||count++<limit))b[n++]=*v++;}}b[n]=0;va_end(ap);return n;}
@@ -21,7 +21,7 @@ I32 LookupAccountNameW(T a,T name,H sid,U32*n,W*domain,U32*dn,U32*type){(void)a;
 U32 GetDriveTypeW(T a){return a[0]=='Z'?4:diskKind;}U32 GetWindowsDirectoryW(W*b,U32 n){cp(b,n,L"C:\\Windows");return 10;}
 I32 GetVolumeInformationW(T a,W*b,U32 c,U32*d,U32*e,U32*f,W*fs,U32 n){if(b&&c)cp(b,c,a[0]=='D'?L"수업자료":L"");(void)d;(void)e;(void)f;return cp(fs,n,ntfs?L"NTFS":L"exFAT");}
 U32 QueryDosDeviceW(T a,W*b,U32 n){(void)a;cp(b,n,dosAlias?L"\\??\\D:\\mount":L"\\Device\\HarddiskVolume9");return 25;}
-I32 GetVolumeNameForVolumeMountPointW(T root,W*b,U32 n){return cp(b,n,root[0]=='C'||systemAlias?volumeOS:((root[0]=='E'&&!aliasedLetter)||letterSwap)?volumeE:volumeD);}
+I32 GetVolumeNameForVolumeMountPointW(T root,W*b,U32 n){if(root[0]=='E'&&volumeError)return 0;return cp(b,n,root[0]=='C'||systemAlias?volumeOS:((root[0]=='E'&&!aliasedLetter)||letterSwap)?volumeE:volumeD);}
 U32 GetFileAttributesW(T a){(void)a;return reparse?0x410:16;}
 H CreateFileW(T path,U32 access,U32 sharing,H sa,U32 creation,U32 flags,H template){(void)sa;(void)template;CHECK(access==0x60080&&sharing==3&&creation==3&&flags==0x02200000);opened++;cp(openedPath,CNT(openedPath),path);return (H)10;}
 U32 GetFinalPathNameByHandleW(H h,W*b,U32 n,U32 f){CHECK(h==(H)10&&f<=1);if(f){cp(b,n,handleSwap||openedPath[0]=='E'?volumeE:volumeD);}else {cp(b,n,L"\\\\?\\");cat(b,n,openedPath);}if(shortRoot&&rootpath(openedPath))b[sz(b)-1]=0;return sz(b);}
@@ -31,7 +31,7 @@ U32 NetApiBufferFree(H p){(void)p;return 0;}
 U32 NetShareGetInfo(T server,T name,U32 level,U8**p){(void)server;(void)name;static Share502 share;static Flags flags;
 if(level==502){if(!exists&&!liveShare)return 2310;share.name=L"자료";share.type=0;share.comment=(owned&&(!liveShare||!wrongOwner))?appTag:L"somebody else";share.path=(W*)(liveShare?(wrongPath?L"F:\\Unexpected":wanted):existingPath);*p=(U8*)&share;return 0;}
 CHECK(level==1005);flags.flags=omitEncrypt?0:missingABE?(liveFlags&~0x800):liveFlags;*p=(U8*)&flags;return 0;}
-U32 NetShareEnum(T server,U32 level,U8**p,U32 size,U32*n,U32*total,U32*resume){(void)server;(void)size;(void)resume;static Share502 share;CHECK(level==502);share.type=0;share.path=(W*)existingPath;*p=overlap?(U8*)&share:0;*n=*total=overlap?1:0;return 0;}
+U32 NetShareEnum(T server,U32 level,U8**p,U32 size,U32*n,U32*total,U32*resume){(void)server;(void)size;(void)resume;static struct {W*name;U32 type;W*comment;U32 perm,max,use;W*path,*pwd;} share;CHECK(level==2);share.name=L"WindowsBackup";share.type=specialShare;share.path=(W*)existingPath;*p=overlap?(U8*)&share:0;*n=*total=overlap?1:0;if(enumFailure)return enumFailure;return 0;}
 U32 NetLocalGroupAdd(T server,U32 level,U8*p,U32*err){(void)server;(void)err;Group1*g=(Group1*)p;CHECK(level==1&&eq(g->comment,appTag));groupAdds++;if(failGroup==groupAdds)return 2223;groups++;return 0;}
 U32 NetLocalGroupDel(T server,T group){(void)server;(void)group;groups--;groupDels++;return 0;}
 U32 NetLocalGroupGetInfo(T server,T name,U32 level,U8**p){(void)server;(void)name;(void)level;static Group1 g;g.comment=appTag;*p=(U8*)&g;return 0;}
@@ -43,7 +43,7 @@ U32 SetSecurityInfo(H h,U32 type,U32 info,H a,H b,H acl,H c){(void)a;(void)b;(vo
 U32 NetShareAdd(T server,U32 level,U8*p,U32*err){(void)server;(void)err;Share502*s=(Share502*)p;CHECK(level==502&&eq(s->name,L"자료")&&eq(s->path,wanted)&&s->sd==(H)20&&eq(s->comment,appTag));shareAdds++;if(!failShare)liveShare=1;return failShare?5:0;}
 U32 NetShareSetInfo(T server,T name,U32 level,U8*p,U32*err){(void)server;(void)name;(void)err;CHECK(level==1005);liveFlags=((Flags*)p)->flags;CHECK((liveFlags&0x8800)==0x8800);return failFlags?50:0;}
 U32 NetShareDel(T server,T name,U32 zero){(void)server;(void)name;CHECK(!zero);shareDels++;if(!failDelete)liveShare=0;return failDelete?5:0;}
-static void reset(void){groups=groupAdds=groupDels=aclGrants=aclRevokes=shareAdds=shareDels=opened=closed=0;failGroup=failAcl=failShare=failFlags=omitEncrypt=failDelete=overlap=exists=reparse=0;owned=ntfs=1;aliasedLetter=liveShare=wrongPath=wrongOwner=missingABE=0;letterSwap=handleSwap=shortRoot=dosAlias=systemAlias=0;diskKind=3;wanted=existingPath=L"D:\\Data";driveMask=(1u<<2)|(1u<<3)|(1u<<4)|(1u<<25);recordedError=liveFlags=0;}
+static void reset(void){groups=groupAdds=groupDels=aclGrants=aclRevokes=shareAdds=shareDels=opened=closed=0;failGroup=failAcl=failShare=failFlags=omitEncrypt=failDelete=overlap=exists=reparse=0;owned=ntfs=1;aliasedLetter=liveShare=wrongPath=wrongOwner=missingABE=0;letterSwap=handleSwap=shortRoot=dosAlias=systemAlias=0;diskKind=3;wanted=existingPath=L"D:\\Data";driveMask=(1u<<2)|(1u<<3)|(1u<<4)|(1u<<25);recordedError=liveFlags=enumFailure=specialShare=volumeError=0;}
 static int create(void){return shareaction(L"자료",L"D:\\Data",0,0,out,CNT(out));}
 int main(void){
 reset();CHECK(create());CHECK(groups==2&&aclGrants==1&&!aclRevokes&&shareAdds==1&&!shareDels&&opened==closed);
@@ -85,4 +85,8 @@ reset();wrongPath=1;CHECK(!create());CHECK(!groups&&shareDels==1&&aclRevokes==1)
 reset();wrongOwner=1;CHECK(!create());CHECK(!groups&&shareDels==0&&aclRevokes==1); /* keep unrelated share */
 reset();missingABE=1;CHECK(!create());CHECK(!groups&&shareDels==1&&aclRevokes==1);
 reset();aliasedLetter=1;overlap=1;existingPath=L"E:\\Else";CHECK(!shareaction(L"자료",L"D:\\",0,volumeD,out,CNT(out)));CHECK(!groupAdds&&!opened);
+reset();enumFailure=5;CHECK(!create()&&recordedError==5&&!groupAdds&&!shareAdds);
+reset();overlap=1;existingPath=L"D:\\Data\\child";CHECK(!create()&&!groupAdds);int hasName=0,hasPath=0;for(T q=out;*q;q++){if(sz(q)>=13&&CompareStringOrdinal(q,13,L"WindowsBackup",13,1)==2)hasName=1;if(sz(q)>=sz(existingPath)&&CompareStringOrdinal(q,sz(existingPath),existingPath,sz(existingPath),1)==2)hasPath=1;}CHECK(hasName&&hasPath);
+reset();overlap=1;existingPath=L"D:\\";specialShare=0x80000000u;CHECK(create()&&shareAdds==1);
+reset();overlap=1;existingPath=L"E:\\Data";volumeError=1;CHECK(!create()&&!groupAdds);
 printf("%d drive selection, share creation, rollback, encrypted-share enforcement and folder protection checks passed (Windows APIs simulated).\n",checks);return 0;}

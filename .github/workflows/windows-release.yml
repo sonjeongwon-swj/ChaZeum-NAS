@@ -25,7 +25,7 @@ jobs:
           python3 -B tools/build.py
           python3 -B tests/check.py
           mkdir unsigned
-          cp out/ChaZeumServer.exe out/ChaZeumClient.exe unsigned/
+          cp out/Chazeum-NAS_SERVER.exe out/Chazeum-NAS_USER.exe unsigned/
           python3 -B release/verify_payload.py unsigned
       - id: version
         shell: bash
@@ -41,6 +41,23 @@ jobs:
           path: unsigned/
           if-no-files-found: error
           retention-days: 7
+      - name: Get the immutable prior release for the update test
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: 79deca4f1db738d28957ab59925d921ec9ab630c
+          path: previous
+          persist-credentials: false
+      - name: Build and check the prior client separately from release payloads
+        run: |
+          cd previous
+          python3 -B tools/build.py
+          python3 -B release/verify_payload.py out
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ci-previous-client
+          path: previous/out/ChaZeumClient.exe
+          if-no-files-found: error
+          retention-days: 1
   windows_ui:
     name: Open both apps on Windows
     needs: build
@@ -49,6 +66,13 @@ jobs:
     permissions:
       contents: read
     steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: ci-previous-client
+          path: ci-old
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: reviewed-unsigned-input
@@ -68,11 +92,11 @@ jobs:
           }
           '@
           $roles = @(
-            @{ exe='ChaZeumServer.exe'; role='서버용'; button='공유 추가' },
-            @{ exe='ChaZeumClient.exe'; role='유저용'; button='서버 주소 저장' }
+            @{ exe='Chazeum-NAS_SERVER.exe'; role='서버용'; button='부팅 때 공유 시작' },
+            @{ exe='Chazeum-NAS_USER.exe'; role='유저용'; button='서버 주소 저장' }
           )
           foreach ($item in $roles) {
-            $title = "차즘 NAS $env:PRODUCT_VERSION · $($item.role)"
+            $title = "$([IO.Path]::GetFileNameWithoutExtension($item.exe)) $env:PRODUCT_VERSION · $($item.role)"
             $app = Start-Process -FilePath (Resolve-Path (Join-Path unsigned $item.exe)).Path -PassThru
             try {
               $timer = [Diagnostics.Stopwatch]::StartNew()
@@ -96,6 +120,9 @@ jobs:
               $app.Dispose()
             }
           }
+      - name: Verify a real client upgrade and local SMB access after the server window closes
+        shell: pwsh
+        run: ./tests/windows-upgrade.ps1
   sign:
     needs: [build, windows_ui]
     # No signing request for pushes, PRs, unprotected refs or before real enrollment.
@@ -141,8 +168,8 @@ jobs:
         run: |
           ./release/verify-release.ps1 -Unsigned unsigned -Signed signed -ExpectedCertSha256 $env:SIGNER_CERT
           New-Item -ItemType Directory ship -ErrorAction Stop | Out-Null
-          Copy-Item -LiteralPath signed/ChaZeumServer.exe -Destination 'ship/서버용.exe'
-          Copy-Item -LiteralPath signed/ChaZeumClient.exe -Destination 'ship/유저용.exe'
+          Copy-Item -LiteralPath signed/Chazeum-NAS_SERVER.exe -Destination 'ship/Chazeum-NAS_SERVER.exe'
+          Copy-Item -LiteralPath signed/Chazeum-NAS_USER.exe -Destination 'ship/Chazeum-NAS_USER.exe'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: windows-signed-pair

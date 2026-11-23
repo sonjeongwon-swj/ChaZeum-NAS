@@ -36,11 +36,11 @@ def render(controls,role,idx,title,caption,output):
     else:row+=ch
    if row or not para:lines.append(row)
   for j,l in enumerate(lines[:maxlines]):text(x,y+j*spacing,l,n)
- rect(0,0,W,7,'#5945a8');text(28,28,'차즘 NAS 5.0.0.3     /     메뉴 설계 미리보기',14,'#5643a2',True)
+ rect(0,0,W,7,'#14263D');text(28,28,'차즘 NAS 5.0.0.4     /     메뉴 설계 미리보기',14,'#14263D',True)
  text(28,68,title,28,'#22233b',True);text(29,106,caption,16,'#41475a')
  ox=29;oy=174
  rect(ox-1,oy-39,ox+789,oy+598,'#f0f0f0','#aeb2bf',6);rect(ox,oy-38,ox+788,oy-1,'#fafafa',None,5)
- text(ox+14,oy-19,'차즘 NAS 5.0.0.3 · '+('서버용' if role=='server' else '유저용'),15)
+ text(ox+14,oy-19,('Chazeum-NAS_SERVER' if role=='server' else 'Chazeum-NAS_USER')+' 5.0.0.4',15)
  text(ox+770,oy-19,'×',18,'#555b67',False,'mm')
  for c in controls:
   kind=c['kind'];x=ox+c['x'];y=oy+c['y'];w,h=c['w'],c['h'];t=c['text'];ident=c['id'];fl=c['flags']

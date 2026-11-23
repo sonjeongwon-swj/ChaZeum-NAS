@@ -20,7 +20,7 @@ with tempfile.TemporaryDirectory() as td:
   run([*opts,R/'tests'/f'{name}.c',*[R/'src'/(u+'.c') for u in units],'-o',exe])
   print(run([exe,*args]))
  ctest('scenarios',['model','admin','map']);ctest('auth_flow',['map','model']);ctest('share_flow',['admin','model']);ctest('tunnel_flow',['model']);ctest('io',['meter','model'],[t/'new-file'])
- ctest('abi',[])
+ ctest('abi',[]);ctest('startup_flow',['startup','model'])
  for role in [1,0]:
   exe=t/f'ui-{role}'
   run(['gcc','-std=c11',*flags,'-fshort-wchar','-ffunction-sections','-fdata-sections',f'-DSERVER={role}','-I'+str(R/'src'),'-Wl,--gc-sections',R/'tests/ui_approval.c',R/'src/model.c','-o',exe])
@@ -28,7 +28,7 @@ with tempfile.TemporaryDirectory() as td:
 pdf=(R/'docs/Guide.pdf').read_bytes();reader=PdfReader(R/'docs/Guide.pdf');assert len(reader.pages)==9 and '아이패드' in reader.pages[4].extract_text()
 assert all('드라이브' in reader.pages[i].extract_text() or '아이디' in reader.pages[i].extract_text() for i in [6,7,8])
 for s in ['Server','Client']:
- p=O/f'ChaZeum{s}.exe';b=p.read_bytes();pe=struct.unpack_from('<I',b,60)[0];assert b[:2]==b'MZ' and b[pe:pe+4]==b'PE\0\0'
+ role='SERVER' if s=='Server' else 'USER'; p=O/f'Chazeum-NAS_{role}.exe';b=p.read_bytes();pe=struct.unpack_from('<I',b,60)[0];assert b[:2]==b'MZ' and b[pe:pe+4]==b'PE\0\0'
  machine,sc=struct.unpack_from('<HH',b,pe+4);opt=pe+24;assert machine==0x8664 and struct.unpack_from('<H',b,opt)[0]==0x20b
  def pair(at):return struct.unpack_from('<II',b,at)
  assert pair(opt+112+4*8)==(0,0), 'dev artifact should be clearly unsigned';assert struct.unpack_from('<H',b,opt+68)[0]==2
@@ -41,13 +41,19 @@ for s in ['Server','Client']:
  def child(a,id):
   z=root+a;n=sum(struct.unpack_from('<HH',b,z+12))
   tab=[pair(z+16+i*8) for i in range(n)];return next(v&0x7fffffff for k,v in tab if k==id)
- def resource(typ,lang):
-  pos=child(child(child(0,typ),1),lang);r,l=pair(root+pos);return b[off(r):off(r)+l]
+ def resource(typ,lang,ident=1):
+  pos=child(child(child(0,typ),ident),lang);r,l=pair(root+pos);return b[off(r):off(r)+l]
  m=ET.fromstring(resource(24,0));level=m.find('.//{urn:schemas-microsoft-com:asm.v3}requestedExecutionLevel');assert level.get('level')==('requireAdministrator' if s=='Server' else 'asInvoker')
- v=resource(16,0x412);idx=v.index(bytes.fromhex('bd04effe'));assert struct.unpack_from('<I',v,idx+8)[0]==0x50000 and struct.unpack_from('<I',v,idx+12)[0]==3 and '5.0.0.3'.encode('utf-16le') in v
+ v=resource(16,0x412);idx=v.index(bytes.fromhex('bd04effe'));assert struct.unpack_from('<I',v,idx+8)[0]==0x50000 and struct.unpack_from('<I',v,idx+12)[0]==4 and '5.0.0.4'.encode('utf-16le') in v
+ assert p.name.encode('utf-16le') in v
+ ico=(R/'brand'/f'{role}.ico').read_bytes();group=resource(14,0,101);assert group[:6]==ico[:6]
+ num=struct.unpack_from('<H',ico,4)[0];assert num==9 and len(group)==6+14*num
+ for i in range(num):
+  row=ico[6+16*i:22+16*i];g=group[6+i*14:20+i*14];length,offset=struct.unpack_from('<II',row,8)
+  assert row[:12]==g[:12] and resource(3,0,struct.unpack_from('<H',g,12)[0])==ico[offset:offset+length]
  assert b.count(pdf)==1
- info=run(['objdump','-p',p]);assert 'WinVerifyTrust' in info
+ info=run(['objdump','-p',p]);assert 'WinVerifyTrust' in info and 'LoadImageW' in info
  if s=='Client':assert 'WNetAddConnection2W' in info and 'CredWriteW' in info and 'RasDialW' in info and 'NetUserAdd' not in info and 'NetShareAdd' not in info and all(api in info for api in ['LogonUserW','ImpersonateLoggedOnUser','RevertToSelf'])
- else:assert 'NetUserAdd' in info and 'NetShareAdd' in info and 'LsaAddAccountRights' in info and 'RasDialW' not in info and 'CredWriteW' not in info
+ else:assert all(api in info for api in ['Shell_NotifyIconW','QueryServiceConfigW','ChangeServiceConfigW','StartServiceW']) and 'NetUserAdd' in info and 'NetShareAdd' in info and 'LsaAddAccountRights' in info and 'RasDialW' not in info and 'CredWriteW' not in info
  print(s,'x64, resource version, privilege level, unsigned state, separate role imports and embedded PDF passed;',sha(p))
 print('No target Windows launch, publisher signature, phone, iPad, outside laptop or external throughput is represented by these results.')

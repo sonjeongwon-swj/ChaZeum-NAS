@@ -10,7 +10,13 @@ static int octets(T s,int o[4]){if(!s)return 0;for(int i=0;i<4;i++){int n=0,d=0;
 int ipprivate(T s){int o[4];return octets(s,o)&&((o[0]==10)||(o[0]==172&&o[1]>=16&&o[1]<=31)||(o[0]==192&&o[1]==168));}
 int hostok(T s){int n=sz(s),o[4];if(n<3||n>253)return 0;if(octets(s,o))return !ipprivate(s)&&o[0]>0&&o[0]<224&&o[0]!=127&&!(o[0]==169&&o[1]==254)&&!(o[0]==100&&o[1]>=64&&o[1]<=127);int dots=0,len=0,hasLetter=0;for(int i=0;i<=n;i++){W c=s[i];if(c=='.'||c==0){if(!len||len>63||s[i-1]=='-')return 0;len=0;dots+=c=='.';}else{if((!al(c)&&c!='-')||(!len&&c=='-'))return 0;len++;if(fold(c)>='a'&&fold(c)<='z')hasLetter=1;}}return dots&&hasLetter;}
 int machineok(T s){int n=sz(s);if(n<1||n>15)return 0;for(int i=0;i<n;i++)if(!al(s[i])&&s[i]!='-'&&!(s[i]>=0xac00&&s[i]<=0xd7a3))return 0;return s[0]!='-'&&s[n-1]!='-';}
-int idok(T s){int n=sz(s);if(n<1||n>20||!al(*s))return 0;for(int i=0;i<n;i++)if(!al(s[i])&&s[i]!='_'&&s[i]!='-')return 0;return !eq(s,L"administrator")&&!eq(s,L"guest")&&!eq(s,L"defaultaccount")&&!eq(s,L"wdagutilityaccount");}
+/* A Windows local name, not an ASCII slug. Retain Windows' delimiters,
+   the local account length boundary, and separation from its built-in accounts. */
+int idok(T s){
+ int n=sz(s);if(!n||n>20||s[n-1]=='.')return 0;
+ T invalid=L"\",/\\[]:|<>+=;?*";for(int i=0;i<n;i++){if(s[i]<32)return 0;for(T p=invalid;*p;p++)if(s[i]==*p)return 0;}
+ return !eq(s,L"administrator")&&!eq(s,L"guest")&&!eq(s,L"defaultaccount")&&!eq(s,L"wdagutilityaccount");
+}
 int shareok(T s){int n=sz(s);if(n<1||n>60||s[0]==' '||s[n-1]==' '||s[n-1]=='.')return 0;for(int i=0;i<n;i++){W c=s[i];if(!(al(c)||(c>=0xac00&&c<=0xd7a3)||c==' '||c=='-'||c=='_'))return 0;}return !eq(s,L"IPC")&&!eq(s,L"ADMIN")&&!eq(s,L"PRINT");}
 int letterok(T s){return s&&sz(s)==2&&fold(s[0])>='a'&&fold(s[0])<='z'&&s[1]==':';}
 int validend(const Endpoint*e){return hostok(e->host)&&ipprivate(e->ip)&&machineok(e->machine);}

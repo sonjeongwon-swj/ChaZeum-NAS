@@ -14,7 +14,7 @@ $tool=$tools[0];$tsig=Get-AuthenticodeSignature -LiteralPath $tool
 if ($tsig.Status -ne 'Valid' -or $tsig.SignerCertificate.Subject -notmatch '(^|,\s*)O=Microsoft Corporation(,|$)') {throw 'SDK tool trust check failed.'}
 $hash=[System.Security.Cryptography.SHA256]::Create()
 try {
- foreach ($name in @('ChaZeumServer.exe','ChaZeumClient.exe')) {
+ foreach ($name in @('Chazeum-NAS_SERVER.exe','Chazeum-NAS_USER.exe')) {
      $p=Join-Path $Signed $name; $s=Get-AuthenticodeSignature -LiteralPath $p
      if ($s.Status -ne 'Valid' -or $null -eq $s.TimeStamperCertificate -or $null -eq $s.SignerCertificate) {throw "$name : no valid timestamped publisher signature"}
      $cert=([BitConverter]::ToString($hash.ComputeHash($s.SignerCertificate.RawData))).Replace('-','')

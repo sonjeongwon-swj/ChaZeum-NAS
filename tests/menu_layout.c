@@ -24,6 +24,7 @@ N SendMessageW(H v,U32 msg,uintptr_t a,N b){Control*c=v;if(!c)return 0;
 I32 SetWindowTextW(H v,T t){if(v)cp(((Control*)v)->text,660,t);return 1;}
 I32 GetComputerNameW(W*b,U32*n){return cp(b,*n,L"NAS-PC");}
 #if SERVER
+int server_snapshot(W*b,int n){return cp(b,n,L"파일 공유 서비스: 실행 중   |   부팅 때 시작: 자동\r\n이 앱으로 등록한 공유: 1개 (예시)\r\n외부 접속: 별도 시험 필요");}
 int datavolumes(VolumePick*v,int cap){if(cap<1)return 0;cp(v[0].root,4,L"D:\\");cp(v[0].label,64,L"자료 디스크");cp(v[0].id,72,L"sample-volume");return 1;}
 int choices(int people,W*b,int n){return cp(b,n,people?L"demo\n":L"자료창고\n");}
 #else
@@ -32,7 +33,7 @@ int getstr(H a,T b,T c,W*d,int n){(void)a;(void)b;(void)c;(void)d;(void)n;return
 #endif
 static void string(T t){putchar('"');while(*t)printf("\\u%04x",(unsigned)*t++);putchar('"');}
 int main(int argc,char**argv){
- if(argc!=2)return 2;int p=atoi(argv[1]);if(p<0||p>4)return 2;font=(H)1;titlefont=(H)2;
+ if(argc!=2)return 2;int p=atoi(argv[1]);if(p<0||p>(SERVER?5:4))return 2;font=(H)1;titlefont=(H)2;
  page(p);
 #if SERVER
  if(p==1){SendMessageW(field[5],0x14e,0,0);pickwhole();pre(1,L"자료창고");}

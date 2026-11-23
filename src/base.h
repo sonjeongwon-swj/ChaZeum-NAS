@@ -10,9 +10,9 @@ typedef uint32_t U32; typedef int32_t I32; typedef uint16_t U16; typedef uint8_t
 #define PRODUCT L"차즘 NAS 5.0"
 #define SRVKEY L"Software\\ChazeumNAS\\Five\\Server"
 #define CLIKEY L"Software\\ChazeumNAS\\Five\\Client"
-int rootpath(T);
-#define TITLE_SERVER L"차즘 NAS 5.0.0.3 · 서버용"
-#define TITLE_CLIENT L"차즘 NAS 5.0.0.3 · 유저용"
+int rootpath(T); H brandicon(H inst,int small);
+#define TITLE_SERVER L"Chazeum-NAS_SERVER 5.0.0.4 · 서버용"
+#define TITLE_CLIENT L"Chazeum-NAS_USER 5.0.0.4 · 유저용"
 #define MARK L"ChaZeumNAS5 network account"
 typedef struct {U32 a; U16 b,c; U8 d[8];} Guid;
 typedef struct {H window; U32 msg; uintptr_t wp; N lp; U32 time; I32 x,y; U32 spare;} Msg;
@@ -63,7 +63,7 @@ int shellop(T,const Fields*,W*,int);
 extern const W *ops[];
 enum {STATUS,SHAREADD,SHAREREMOVE,RIGHTS,SERVERNET,IPLIST,FWADD,VPNMAKE,VPNCHECK,VPNREMOVE,VPNINFO};
 int nativeuser(T,W*,W*,int);int accountcreds(T,T,W*,int,int);
-int vpninstall(const Endpoint*,T,W*,W*,W*,int);int connectnas(const Endpoint*,int,W*,int);int mapdrive(const Endpoint*,T,T,T,W*,int,W*,int);int scan(const Endpoint*,T,W*,W*,int);int detach(T,W*,int);int restore(W*,int);int driveprobe(const Endpoint*,T,W*,int);int setstartup(int,W*,int);int forgetvpn(W*,int);int guidtext(W*,int);
+int vpninstall(const Endpoint*,T,W*,W*,W*,int);int connectnas(const Endpoint*,int,W*,int);int mapdrive(const Endpoint*,T,T,T,W*,int,W*,int);int scan(const Endpoint*,T,W*,W*,int);int detach(T,W*,int);int restore(W*,int);int driveprobe(const Endpoint*,T,W*,int);int startup_legacy(void);int setstartup(int,W*,int);int forgetvpn(W*,int);int guidtext(W*,int);
 int makeguide(W*,int);void winmain(void);void start(void);
 _Static_assert(sizeof(RasParams)==2128 && offsetof(RasParams,enc)==2120 && sizeof(RasCred)==1068,"RAS credentials ABI");
 #endif

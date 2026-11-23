@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="1000"
+   height="880"
+   viewBox="0 0 1000 880"
+   version="1.1"
+   id="svg3"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs3" />
+  <title
+     id="title1">차즘 BI</title>
+  <g
+     transform="translate(0,0) scale(1)"
+     fill="#14263D"
+     id="g3">
+    <path
+       d="M265 120H755V230H385V575L265 640Z"
+       id="path1" />
+    <path
+       d="M795 350L915 290V830H555V720H795Z"
+       id="path2" />
+    <path
+       fill="#F27038"
+       d="M65 830H405L755 490V465Z"
+       id="path3" />
+  </g>
+</svg>

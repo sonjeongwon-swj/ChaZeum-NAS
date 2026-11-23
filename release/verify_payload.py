@@ -7,7 +7,7 @@ import struct
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ROLES = {'Server':'ChaZeumServer.exe','Client':'ChaZeumClient.exe'}
+ROLES = {'Server':'Chazeum-NAS_SERVER.exe','Client':'Chazeum-NAS_USER.exe'}
 
 def check(ok,msg):
     if not ok: raise ValueError(msg)

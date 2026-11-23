@@ -2,7 +2,7 @@
 <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
   <parameters><parameter name="version" required="true"/></parameters>
   <zip-file>
-    <pe-file path="ChaZeumServer.exe" original-filename="ChaZeumServer.exe" company-name="ChaZeum NAS" product-name="차즘 NAS" file-version="${version}" product-version="${version}"><authenticode-sign/></pe-file>
-    <pe-file path="ChaZeumClient.exe" original-filename="ChaZeumClient.exe" company-name="ChaZeum NAS" product-name="차즘 NAS" file-version="${version}" product-version="${version}"><authenticode-sign/></pe-file>
+    <pe-file path="Chazeum-NAS_SERVER.exe" original-filename="Chazeum-NAS_SERVER.exe" company-name="ChaZeum NAS" product-name="차즘 NAS" file-version="${version}" product-version="${version}"><authenticode-sign/></pe-file>
+    <pe-file path="Chazeum-NAS_USER.exe" original-filename="Chazeum-NAS_USER.exe" company-name="ChaZeum NAS" product-name="차즘 NAS" file-version="${version}" product-version="${version}"><authenticode-sign/></pe-file>
   </zip-file>
 </artifact-configuration>
