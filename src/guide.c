@@ -1,0 +1,3 @@
+#include "base.h"
+extern U32 GetTempPathW(U32,W*);extern const U8 CZGuide[],CZGuideEnd[];
+int makeguide(W*out,int cap){W path[540],id[40];U32 n=GetTempPathW(CNT(path),path);if(!n||n>=CNT(path)||!guidtext(id,CNT(id))||!cat(path,CNT(path),L"ChaZeumNAS5-")||!cat(path,CNT(path),id)||!cat(path,CNT(path),L".pdf"))return 0;H h=CreateFileW(path,0x40000000,1,0,1,0x80,0);if(h==BAD)return errnum(out,cap,L"그림 안내를 열 수 없습니다.",GetLastError());U32 len=(U32)(CZGuideEnd-CZGuide),got=0;int ok=WriteFile(h,CZGuide,len,&got,0)&&got==len;CloseHandle(h);if(!ok||(N)ShellExecuteW(0,L"open",path,0,0,1)<=32){if(!ok)DeleteFileW(path);cp(out,cap,L"기본 PDF 뷰어에서 열 수 없습니다.");return 0;}return cp(out,cap,L"기본 PDF 뷰어에서 9쪽 그림 안내를 열었습니다.");}

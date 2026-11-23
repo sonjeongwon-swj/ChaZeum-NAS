@@ -1,0 +1,6 @@
+/out/
+/unsigned/
+/signed/
+/ship/
+__pycache__/
+*.pyc
