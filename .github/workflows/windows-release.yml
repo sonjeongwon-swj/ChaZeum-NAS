@@ -62,7 +62,7 @@ jobs:
     name: Open both apps on Windows
     needs: build
     runs-on: windows-2022
-    timeout-minutes: 6
+    timeout-minutes: 12
     permissions:
       contents: read
     steps:
@@ -123,6 +123,9 @@ jobs:
       - name: Verify a real client upgrade and local SMB access after the server window closes
         shell: pwsh
         run: ./tests/windows-upgrade.ps1
+      - name: Exercise the released client with a live WireGuardNT tunnel on this disposable VM
+        shell: pwsh
+        run: ./tests/windows-wireguard.ps1
   sign:
     needs: [build, windows_ui]
     # No signing request for pushes, PRs, unprotected refs or before real enrollment.
