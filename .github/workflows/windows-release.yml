@@ -1,7 +1,7 @@
 name: Build and verify Windows pair
 on:
   push:
-    branches: [main, work/registered-vpn-drive]
+    branches: [main, work/registered-vpn-drive, work/easy-nas-desktop]
   workflow_dispatch: {}
 permissions:
   contents: read
@@ -126,6 +126,15 @@ jobs:
       - name: Exercise the released client with a live WireGuardNT tunnel on this disposable VM
         shell: pwsh
         run: ./tests/windows-wireguard.ps1
+      - name: Build and exercise the two conventional Windows setup programs in this disposable VM
+        shell: pwsh
+        run: ./tests/windows-setup.ps1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: windows-setup-test-only
+          path: setup-test/*.exe
+          retention-days: 7
+          if-no-files-found: error
   sign:
     needs: [build, windows_ui]
     # No signing request for pushes, PRs, unprotected refs or before real enrollment.
