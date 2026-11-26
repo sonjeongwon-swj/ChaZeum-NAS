@@ -9,7 +9,7 @@ extern I32 GetWindowTextLengthW(H);
 static H win,inst,font,titlefont,kids[64],field[8],status,nav[6];static int nk,np,busy,verified,lastop;
 static unsigned listOnly;
 static Endpoint known;static W message[12288];
-enum {TABS=100,PICK=202,SAVE=203,COPY=204,LIST=205,ADD=206,REMOVE=207,USER=208,RIGHT=209,IPLIST5=210,FWR=211,PASTE=212,VPN=213,DELVPN=214,DISC=215,MAP=216,UNMAP=217,RETRY=218,AUTOON=219,AUTOOFF=220,TEST=221,HELP=222,FWDEL=223,FWLIST=224,BYUSER=225,PWRESET=226,VOLREFRESH=227,SVCVIEW=228,BOOTSHARE=229,MANUALSHARE=230,TOTRAY=231};
+enum {TABS=100,PICK=202,SAVE=203,COPY=204,LIST=205,ADD=206,REMOVE=207,USER=208,RIGHT=209,IPLIST5=210,FWR=211,PASTE=212,VPN=213,DELVPN=214,DISC=215,MAP=216,UNMAP=217,RETRY=218,AUTOON=219,AUTOOFF=220,TEST=221,HELP=222,FWDEL=223,FWLIST=224,BYUSER=225,PWRESET=226,VOLREFRESH=227,SVCVIEW=228,BOOTSHARE=229,MANUALSHARE=230,TOTRAY=231,BINDNET=232,SHOWNET=233};
 typedef struct {int op,choice,home,remember;Endpoint e;W v[6][520];W volume[72];} Work;static Work job;
 static H widget(T cls,T text,U32 plus,int x,int y,int w,int h,int id){H v=CreateWindowExW(eq(cls,L"EDIT")?0x200:0,cls,text,0x50000000u|plus,x,y,w,h,win,(H)(N)id,inst,0);if(v){if(nk<CNT(kids))kids[nk++]=v;SendMessageW(v,0x30,(uintptr_t)font,1);}return v;}
 static H label(T t,int x,int y,int w,int h){return widget(L"STATIC",t,0,x,y,w,h,0);}
@@ -88,7 +88,7 @@ T hint[]={L"집 밖 접속용 주소입니다. 집 안에서 폴더를 공유하
 #else
 T tabs[]={L"1. 서버 주소",L"2. 외부 VPN",L"3. 드라이브",L"4. 확인·자동 연결",L"사용 안내"};
 T headings[]={L"내가 연결할 집 PC",L"집 밖에서 집으로 가는 보안 연결",L"탐색기 드라이브 연결",L"자동 연결과 실제 복사 시험",L"처음부터 보는 그림 안내"};
-T hint[]={L"서버에서 복사한 접속 정보를 붙여넣거나, 아래 세 칸을 직접 입력하세요.",L"공유기에 만든 VPN 계정을 한 번 등록하세요. NAS 폴더의 아이디와는 별개입니다.",L"서버가 공유한 드라이브나 폴더를 이 PC에서 쓸 빈 문자에 연결하세요. 서버 문자와 달라도 됩니다.",L"등록한 드라이브를 다시 연결하거나, 실제로 파일을 쓰고 읽어 속도를 볼 수 있습니다.",L"아이폰·아이패드에는 별도 파일 관리 앱 없이 기본 파일 앱을 씁니다."};
+T hint[]={L"WireGuard·Tailscale을 사용 중이면 NAS 주소와 PC 이름만 입력하고 ‘기존 보안망으로 등록’을 누르세요.",L"기존 WireGuard·Tailscale로 등록했으면 이 단계를 건너뛰세요. 아래는 별도 L2TP/IPsec 방식입니다.",L"서버가 공유한 드라이브나 폴더를 이 PC에서 쓸 빈 문자에 연결하세요. 서버 문자와 달라도 됩니다.",L"등록한 드라이브를 다시 연결하거나, 실제로 파일을 쓰고 읽어 속도를 볼 수 있습니다.",L"아이폰·아이패드에는 별도 파일 관리 앱 없이 기본 파일 앱을 씁니다."};
 #endif
 #if SERVER
 dashboard=0;
@@ -102,7 +102,7 @@ if(p==0){
 #if SERVER
 line(0,L"공유기 도메인 / 공인 IP",169,0,128);line(1,L"3080 PC 집 안 IP (IPv4)",211,0,15);line(2,L"이 PC의 이름",253,0,15);W host[16];U32 len=16;if(GetComputerNameW(host,&len))pre(2,host);SendMessageW(field[2],0xcf,1,0);pre(0,known.host);pre(1,known.ip);btn(L"내 PC 주소 보기",26,307,158,IPLIST5);btn(L"주소 저장",197,307,142,SAVE);btn(L"접속 정보 복사",354,307,160,COPY);
 #else
-line(3,L"서버의 접속 정보",155,0,309);btn(L"입력칸에 채우기",193,192,164,PASTE);line(0,L"공유기 도메인 / 공인 IP",237,0,128);line(1,L"3080 PC 집 안 IPv4",278,0,15);line(2,L"서버 PC 이름",319,0,15);pre(0,known.host);pre(1,known.ip);pre(2,known.machine);btn(L"서버 주소 저장",193,362,160,SAVE);
+line(3,L"서버의 접속 정보",155,0,309);btn(L"입력칸에 채우기",193,192,164,PASTE);line(0,L"도메인 (L2TP만)",237,0,128);line(1,L"NAS PC의 IPv4",278,0,15);line(2,L"서버 PC 이름",319,0,15);pre(0,securepin(known.host)?L"":known.host);pre(1,known.ip);pre(2,known.machine);btn(L"기존 보안망으로 등록",192,362,218,BINDNET);btn(L"서버 주소 저장",425,362,160,SAVE);
 #endif
 }
 #if SERVER
@@ -125,10 +125,16 @@ if(p==2){extern int choices(int,W*,int);W listbuf[4096];pickline(0,L"NAS 아이�
 if(p==3){line(0,L"허용할 사설 대역",160,0,22);label(L"예: 집 안 또는 공유기 VPN의 실제 대역. 인터넷 전체는 허용할 수 없습니다.",27,204,740,28);btn(L"방화벽 규칙 추가",27,251,167,FWR);btn(L"이 앱 규칙 보기",206,251,162,FWLIST);btn(L"이 앱 규칙 제거",380,251,162,FWDEL);btn(L"공유·권한 보기",27,301,167,LIST);}
 #else
 if(p==1){line(0,L"공유기 VPN 아이디",156,0,128);line(1,L"공유기 VPN 암호",200,1,127);line(2,L"IPsec 공유 키",244,1,127);btn(L"이 PC에 VPN 등록",192,300,186,VPN);btn(L"이 앱의 VPN 해제",390,300,174,DELVPN);}
-if(p==2){line(0,L"NAS 아이디",148,0,500);line(1,L"NAS 암호",184,1,500);pickline(2,L"열고 싶은 공유 이름",221);combo(3,L"이 PC에서 쓸 문자",257);for(int i=0;i<26;i++){W d[]={(W)('A'+i),':',0};item(3,d);}chk(4,L"지금은 집 안의 신뢰하는 개인망에서 직접 연결",294);btn(L"공유 목록 보기",25,341,170,DISC);btn(L"드라이브 연결·저장",207,341,187,MAP);btn(L"저장한 연결 해제",407,341,173,UNMAP);}
-if(p==3){combo(0,L"시험할 드라이브",156);for(int i=0;i<26;i++){W d[]={(W)('A'+i),':',0},v[465];if(getmap(d,v,CNT(v)))item(0,d);}btn(L"256 MiB 시험",193,201,173,TEST);btn(L"저장한 드라이브 연결",25,260,196,RETRY);btn(L"로그인 때 자동 연결",235,260,187,AUTOON);btn(L"자동 연결 끄기",435,260,153,AUTOOFF);label(L"시험은 새 임시 파일만 만들며, 읽기 전용 폴더에서는 실행되지 않습니다.",27,320,732,40);}
+if(p==2){line(0,L"NAS 아이디",148,0,500);line(1,L"NAS 암호",184,1,500);pickline(2,L"열고 싶은 공유 이름",221);combo(3,L"이 PC에서 쓸 문자",257);for(int i=0;i<26;i++){W d[]={(W)('A'+i),':',0};item(3,d);}if(!securepin(known.host))chk(4,L"지금은 집 안의 신뢰하는 개인망에서 직접 연결",294);else label(L"등록한 보안망을 자동 확인합니다. 집 밖에서 별도 L2TP 계정은 필요 없습니다.",27,294,730,30);btn(L"공유 목록 보기",25,341,170,DISC);btn(L"드라이브 연결·저장",207,341,187,MAP);btn(L"저장한 연결 해제",407,341,173,UNMAP);}
+if(p==3){combo(0,L"시험할 드라이브",156);for(int i=0;i<26;i++){W d[]={(W)('A'+i),':',0},v[465];if(getmap(d,v,CNT(v)))item(0,d);}btn(L"256 MiB 시험",193,201,173,TEST);btn(L"현재 보안 경로 확인",382,201,204,SHOWNET);btn(L"저장한 드라이브 연결",25,260,196,RETRY);btn(L"로그인 때 자동 연결",235,260,187,AUTOON);btn(L"자동 연결 끄기",435,260,153,AUTOOFF);label(L"시험은 새 임시 파일만 만들며, 읽기 전용 폴더에서는 실행되지 않습니다.",27,320,732,40);}
 #endif
-if(p==4){label(L"1   집의 공유기:    외부 연결을 위한 암호화된 통로를 엽니다.\r\n\r\n2   3080 PC:           실제 파일과 폴더별 권한을 관리합니다.\r\n\r\n3   접속 기기:         Windows 탐색기 또는 Apple 파일 앱에서 엽니다.",27,159,729,143);btn(L"그림 설명서 열기 (PDF)",27,324,241,HELP);}
+if(p==4){
+#if SERVER
+label(L"1   집의 공유기:    외부 연결을 위한 암호화된 통로를 엽니다.\r\n\r\n2   3080 PC:           실제 파일과 폴더별 권한을 관리합니다.\r\n\r\n3   접속 기기:         Windows 탐색기 또는 Apple 파일 앱에서 엽니다.",27,159,729,143);
+#else
+label(L"노트북: 집으로 연결된 WireGuard 또는 Tailscale이 있으면 ‘1. 서버 주소’에서 NAS PC의 주소와 이름을 넣고 ‘기존 보안망으로 등록’을 누르세요.\r\n\r\n아이폰·아이패드: 집 밖에서는 먼저 같은 집으로 VPN을 연결하세요. 파일 → 둘러보기 → … → 서버에 연결에서 smb:// 뒤에 NAS PC 주소를 넣고 ‘등록 사용자’로 로그인하세요.",27,159,729,151);
+#endif
+btn(L"그림 설명서 열기 (PDF)",27,324,241,HELP);}
 /* The OS decides whether this executable may run. Self-signature is informational;
    native privilege checks, credentials, route validation and explicit change consent
    still apply to every operation. Nothing here alters Windows application control. */
@@ -152,10 +158,11 @@ case PWRESET:return L"이 NAS 아이디의 암호를 바꾸고 해당 아이디�
 case RIGHT:return L"입력한 아이디의 해당 폴더 권한을 바꾸고, 새 권한 적용을 위해 이 서버에서 그 아이디의 기존 파일 연결을 닫습니다. 저장을 마친 뒤 진행하세요. 적용할까요?";
 case FWR:return L"이 서버의 개인 네트워크에서, 입력한 사설 대역에만 TCP 445를 허용합니다. 공유기는 변경하지 않습니다. 추가할까요?";
 case FWDEL:return L"차즘 NAS 5.0이 만든 개인망 방화벽 규칙을 모두 제거합니다. 계속할까요?";
+case BINDNET:return L"현재 NAS를 향하는 WireGuard 또는 Tailscale 연결을 이 PC에 등록할까요? 선택한 서버 주소 및 보안망 정보만 저장합니다. VPN 설치·방화벽·공유기는 변경하지 않습니다.";
 case VPN:return L"Windows에 이 사용자 전용 L2TP/IPsec VPN과 NAS 한 대로 가는 경로를 만듭니다. 암호와 공유 키는 Windows에 보관합니다. 등록할까요?";
 case DELVPN:return L"이 앱의 VPN 연결을 종료하고 개인 VPN 프로필을 제거합니다. 열려 있는 파일을 닫은 뒤 진행하세요. 해제할까요?";
 case MAP:return L"선택한 문자에 폴더를 연결하고 NAS 로그인을 Windows 자격 증명 관리자에 보관합니다. 연결할까요?";
-case AUTOON:return L"다음 Windows 로그인 때 이 위치의 Chazeum-NAS_USER.exe로 VPN과 드라이브를 연결합니다. 파일을 이 위치에 두세요. 등록할까요?";
+case AUTOON:return L"다음 Windows 로그인 때 이 위치의 앱으로 저장한 드라이브를 연결할까요? 기존 WireGuard·Tailscale을 등록했다면 해당 보안 연결이 먼저 켜져 있어야 합니다.";
 case AUTOOFF:return L"차즘 NAS의 로그인 자동 연결을 해제할까요?";
 case UNMAP:return L"선택한 드라이브 연결과 이 앱이 보관한 해당 암호를 지울까요?";
 case TEST:return L"이 폴더에 새 256 MiB 파일을 쓰고 다시 읽어 전체 내용을 확인한 뒤 지웁니다. 다운로드·업로드 합계 약 512 MiB가 전송됩니다. 시험할까요?";
@@ -166,12 +173,12 @@ switch(job.op){case BOOTSHARE:case MANUALSHARE:okay=server_service(job.op==BOOTS
 case BYUSER:{extern int byuser(T,W*,int);okay=byuser(job.v[0],out,cap);break;}case IPLIST5:okay=listip(out,cap);break;case LIST:okay=inventory(out,cap);break;case ADD:case REMOVE:okay=shareaction(job.v[1],job.v[0],job.op==REMOVE,job.volume,out,cap);break;case USER:okay=nativeuser(job.v[0],job.v[1],out,cap);break;case PWRESET:{extern int changepw(T,W*,W*,int);okay=changepw(job.v[0],job.v[1],out,cap);break;}case RIGHT:okay=rights(job.v[2],job.v[0],job.choice,out,cap);break;case FWR:okay=firewall(known.ip,job.v[0],out,cap);break;
 case FWLIST:okay=cmdlet(L"Get-NetFirewallRule -Group 'ChaZeum NAS 5' -ErrorAction SilentlyContinue | Get-NetFirewallAddressFilter | ForEach-Object { $_.RemoteAddress }",out,cap);if(okay&&!out[0])cp(out,cap,L"이 앱이 추가한 규칙이 없습니다.");break;case FWDEL:okay=cmdlet(L"Get-NetFirewallRule -Group 'ChaZeum NAS 5' -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'ChaZeumNAS5-*' } | Remove-NetFirewallRule -ErrorAction Stop",out,cap);if(okay)cp(out,cap,L"5.0 방화벽 규칙을 제거했습니다.");break;}
 #else
-switch(job.op){case SAVE:{W vpn[48],b[465];int used=getprofile(vpn,CNT(vpn));for(int i=0;i<26&&!used;i++){W d[]={(W)('A'+i),':',0};used=getmap(d,b,CNT(b));}if(used&&(!eq(known.host,job.e.host)||!eq(known.ip,job.e.ip)||!eq(known.machine,job.e.machine)))cp(out,cap,L"다른 서버로 바꾸려면 기존 드라이브와 이 앱의 VPN을 먼저 해제하세요.");else if(validend(&job.e)&&sz(job.e.host)<=128&&saveendpoint(HKCU,CLIKEY,&job.e)){known=job.e;okay=cp(out,cap,L"서버 주소를 저장했습니다. 집 밖에서 쓸 때는 ‘외부 VPN’을 등록하세요.");}else cp(out,cap,L"공유기 도메인·서버 PC의 사설 IPv4·PC 이름을 확인하세요.");break;}
+switch(job.op){case SHOWNET:okay=route5(&known,out,cap);if(!okay&&!out[0])cp(out,cap,L"등록한 보안 연결이 확인되지 않았습니다.");break;case SAVE:case BINDNET:{if(job.op==BINDNET&&!pinroute(&job.e,out,cap))break;if(job.op==SAVE&&!hostok(job.e.host)){cp(out,cap,L"기존 보안망을 쓰려면 옆의 ‘기존 보안망으로 등록’을 누르세요.");break;}W vpn[48],b[465];int used=getprofile(vpn,CNT(vpn));for(int i=0;i<26&&!used;i++){W d[]={(W)('A'+i),':',0};used=getmap(d,b,CNT(b));}if(used&&(!samehost(known.host,job.e.host)||!eq(known.ip,job.e.ip)||!eq(known.machine,job.e.machine)))cp(out,cap,L"다른 서버로 바꾸려면 기존 드라이브와 이 앱의 VPN을 먼저 해제하세요.");else if(validend(&job.e)&&sz(job.e.host)<=128&&saveendpoint(HKCU,CLIKEY,&job.e)){known=job.e;if(job.op==BINDNET){okay=cat(out,cap,L"\r\n이 PC에 등록했습니다. ‘3. 드라이브’에서 NAS 아이디·암호, 공유와 원하는 문자를 고르세요.");}else okay=cp(out,cap,L"서버 주소를 저장했습니다. 기존 L2TP를 쓸 때는 ‘외부 VPN’을 등록하세요.");}else cp(out,cap,L"공유기 도메인·서버 PC의 사설 IPv4·PC 이름을 확인하세요.");break;}
 case VPN:okay=vpninstall(&known,job.v[0],job.v[1],job.v[2],out,cap);break;case DELVPN:okay=forgetvpn(out,cap);break;
 case MAP:case DISC:if(connectnas(&known,job.home,out,cap)){if(job.op==MAP)okay=mapdrive(&known,job.v[2],job.v[0],job.v[3],job.v[1],1,out,cap);else okay=scanonly(&known,job.v[0],job.v[1],out,cap);}break;
 case UNMAP:okay=detach(job.v[3],out,cap);break;case RETRY:okay=restore(out,cap);break;case AUTOON:case AUTOOFF:okay=setstartup(job.op==AUTOON,out,cap);break;case TEST:okay=driveprobe(&known,job.v[0],out,cap);break;}
 #endif
-if(!out[0])cp(out,cap,okay?L"완료했습니다.":L"작업을 마치지 못했습니다. 서버 주소, 권한 및 연결을 확인하세요.");erase(&job,sizeof(job));PostMessageW(win,0x8001,0,0);return 0;}
+if(!out[0])cp(out,cap,okay?L"완료했습니다.":L"작업을 마치지 못했습니다. 서버 주소, 권한 및 연결을 확인하세요.");erase(&job,sizeof(job));PostMessageW(win,0x8001,(uintptr_t)okay,0);return 0;}
 static void act(int id){if(busy)return;if(id>=TABS&&id<TABS+(SERVER?6:5)){page(id-TABS);return;}if(id==HELP){W detail[400];makeguide(detail,CNT(detail));speak(detail);return;}
 #if SERVER
 if(id==SVCVIEW){refreshdash();speak(L"이 PC의 파일 공유 서비스와 부팅 설정을 다시 읽었습니다.");return;}
@@ -187,14 +194,14 @@ if((id==USER||id==PWRESET)&&field[1]&&!GetWindowTextLengthW(field[1])){
 }
 if(id==COPY){W code[320];if(!invite(code,CNT(code),known.host,known.ip,known.machine))speak(L"먼저 서버 주소를 저장하세요.");else speak(clip(code)?L"접속 정보를 복사했습니다. 유저용 첫 화면에 붙여넣으세요. 암호는 포함되지 않습니다.":L"클립보드 복사 실패");return;}
 #else
-if(id==PASTE){W s[320];Endpoint e;if(val(3,s,CNT(s))&&pair(s,e.host,e.ip,e.machine)){pre(0,e.host);pre(1,e.ip);pre(2,e.machine);speak(L"세 칸을 채웠습니다. 내용이 맞으면 ‘서버 주소 저장’을 누르세요.");}else speak(L"CZ5| 로 시작하는 서버의 접속 정보 전체를 넣으세요.");return;}
+if(id==PASTE){W s[320];Endpoint e;if(val(3,s,CNT(s))&&pair(s,e.host,e.ip,e.machine)&&!securepin(e.host)){pre(0,e.host);pre(1,e.ip);pre(2,e.machine);speak(L"세 칸을 채웠습니다. 내용이 맞으면 ‘서버 주소 저장’을 누르세요.");}else speak(L"CZ5| 로 시작하는 서버의 접속 정보 전체를 넣으세요.");return;}
 #endif
 T warning=confirm(id);if(warning&&!ask(warning))return;memset(&job,0,sizeof(job));job.op=id;lastop=id;
 #if SERVER
 if(id==ADD)cp(job.volume,CNT(job.volume),pickedVolume);
 #endif
 for(int i=0;i<4;i++)if(field[i]&&!val(i,job.v[i],CNT(job.v[i]))){speak(L"입력값이 너무 깁니다.");erase(&job,sizeof(job));return;}
-if(id==SAVE){if(!cp(job.e.host,CNT(job.e.host),job.v[0])||!cp(job.e.ip,CNT(job.e.ip),job.v[1])||!cp(job.e.machine,CNT(job.e.machine),job.v[2])){erase(&job,sizeof(job));speak(L"서버 주소 또는 PC 이름의 길이를 확인하세요.");return;}}
+if(id==SAVE||id==BINDNET){if(!cp(job.e.host,CNT(job.e.host),job.v[0])||!cp(job.e.ip,CNT(job.e.ip),job.v[1])||!cp(job.e.machine,CNT(job.e.machine),job.v[2])){erase(&job,sizeof(job));speak(L"서버 주소 또는 PC 이름의 길이를 확인하세요.");return;}}
 job.choice=field[3]?(int)SendMessageW(field[3],0x147,0,0):-1;job.home=checked(4);if(id==USER||id==PWRESET||id==VPN||id==MAP)pre(1,L"");if(id==VPN)pre(2,L"");busy=1;for(int i=0;i<nk;i++)if(kids[i]!=status)EnableWindow(kids[i],0);speak(L"확인 중입니다…");
 #if SERVER
 if(id==ADD||id==REMOVE){stage=0;since=GetTickCount64();reportstage();SetTimer(win,1,2000,0);}
@@ -209,8 +216,9 @@ if(m==0x111){int i=(int)(w&65535);
 #if SERVER
 if(i==405&&(w>>16)==1&&np==1&&!busy&&field[5]&&(H)l==field[5]){pickwhole();return 0;}
 #endif
-if((w>>16)==0&&((i>=100&&i<100+(SERVER?6:5))||(i>=202&&i<=231)))act(i);return 0;}if(m==0x8001){busy=0;for(int i=0;i<nk;i++)EnableWindow(kids[i],1);EnableWindow(nav[np],0);
+if((w>>16)==0&&((i>=100&&i<100+(SERVER?6:5))||(i>=202&&i<=(SERVER?231:233))))act(i);return 0;}if(m==0x8001){busy=0;for(int i=0;i<nk;i++)EnableWindow(kids[i],1);EnableWindow(nav[np],0);
 #if !SERVER
+if(lastop==BINDNET&&w&&np==0)page(2);
 if(lastop==DISC&&np==2){W copy[12288];if(cp(copy,CNT(copy),message)){W keep[61];val(2,keep,CNT(keep));SendMessageW(field[2],0x14b,0,0);addlines(2,copy,1);pre(2,keep);}}
 #endif
 speak(message);

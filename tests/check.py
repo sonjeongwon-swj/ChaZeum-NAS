@@ -20,7 +20,7 @@ with tempfile.TemporaryDirectory() as td:
   run([*opts,R/'tests'/f'{name}.c',*[R/'src'/(u+'.c') for u in units],'-o',exe])
   print(run([exe,*args]))
  ctest('scenarios',['model','admin','map']);ctest('auth_flow',['map','model']);ctest('share_flow',['admin','model']);ctest('tunnel_flow',['model']);ctest('io',['meter','model'],[t/'new-file'])
- ctest('abi',[]);ctest('startup_flow',['startup','model'])
+ ctest('secure_flow',['model','secureroute']);ctest('abi',[]);ctest('startup_flow',['startup','model'])
  for role in [1,0]:
   exe=t/f'ui-{role}'
   run(['gcc','-std=c11',*flags,'-fshort-wchar','-ffunction-sections','-fdata-sections',f'-DSERVER={role}','-I'+str(R/'src'),'-Wl,--gc-sections',R/'tests/ui_approval.c',R/'src/model.c','-o',exe])
@@ -44,7 +44,7 @@ for s in ['Server','Client']:
  def resource(typ,lang,ident=1):
   pos=child(child(child(0,typ),ident),lang);r,l=pair(root+pos);return b[off(r):off(r)+l]
  m=ET.fromstring(resource(24,0));level=m.find('.//{urn:schemas-microsoft-com:asm.v3}requestedExecutionLevel');assert level.get('level')==('requireAdministrator' if s=='Server' else 'asInvoker')
- v=resource(16,0x412);idx=v.index(bytes.fromhex('bd04effe'));assert struct.unpack_from('<I',v,idx+8)[0]==0x50000 and struct.unpack_from('<I',v,idx+12)[0]==4 and '5.0.0.4'.encode('utf-16le') in v
+ v=resource(16,0x412);idx=v.index(bytes.fromhex('bd04effe'));assert struct.unpack_from('<I',v,idx+8)[0]==0x50000 and struct.unpack_from('<I',v,idx+12)[0]==(1<<16) and '5.0.1.0'.encode('utf-16le') in v
  assert p.name.encode('utf-16le') in v
  ico=(R/'brand'/f'{role}.ico').read_bytes();group=resource(14,0,101);assert group[:6]==ico[:6]
  num=struct.unpack_from('<H',ico,4)[0];assert num==9 and len(group)==6+14*num

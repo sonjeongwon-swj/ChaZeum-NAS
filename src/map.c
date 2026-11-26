@@ -6,7 +6,7 @@ static int credname(W*out,int n,const Endpoint*ep,T name){W inv[320];return invi
 static int savepass(T name,T user,T pass){Cred c={0};c.type=1;c.target=(W*)name;c.user=(W*)user;c.persist=2;c.bytes=2*sz(pass);c.blob=c.bytes?(U8*)pass:0;return CredWriteW(&c,0);}
 static int retrieve(T name,T user,W*out,int cap){Cred*c=0;out[0]=0;if(!CredReadW(name,1,0,&c))return 0;int valid=(!c->bytes||c->blob)&&c->bytes%2==0&&c->bytes<(U32)cap*2&&eq(c->user,user);if(valid){if(c->bytes)memcpy(out,c->blob,c->bytes);out[c->bytes/2]=0;}if(c->blob)erase(c->blob,c->bytes);CredFree(c);return valid;}
 int getmap(T letter,W*out,int cap){W vn[12];return valname(vn,letter)&&getstr(HKCU,CLIKEY,vn,out,cap);}
-static int parsemap(const Endpoint*ep,W*info,W**share,W**user){W*x=0,*y=0;for(W*p=info;*p;p++)if(*p=='|'){x=y;y=p;}if(!x||!y)return 0;*y=0;*x=0;*share=x+1;*user=y+1;Endpoint native;return pair(info,native.host,native.ip,native.machine)&&eq(ep->host,native.host)&&eq(ep->ip,native.ip)&&eq(ep->machine,native.machine)&&shareok(*share)&&idok(*user);}
+static int parsemap(const Endpoint*ep,W*info,W**share,W**user){W*x=0,*y=0;for(W*p=info;*p;p++)if(*p=='|'){x=y;y=p;}if(!x||!y)return 0;*y=0;*x=0;*share=x+1;*user=y+1;Endpoint native;return pair(info,native.host,native.ip,native.machine)&&samehost(ep->host,native.host)&&eq(ep->ip,native.ip)&&eq(ep->machine,native.machine)&&shareok(*share)&&idok(*user);}
 static int dircan(T path){H h=CreateFileW(path,1,7,0,3,0x02000000,0);if(h==BAD)return 0;CloseHandle(h);return 1;}
 /* A normal SMB session may reuse an earlier login and ignore a newly typed
    password. Use an independent outbound logon for proof and enumeration.

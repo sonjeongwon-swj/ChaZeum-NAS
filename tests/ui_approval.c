@@ -64,6 +64,7 @@ int listip(W*a,int b){(void)a;(void)b;return 1;}int islocal(T a){(void)a;return 
 int inventory(W*a,int b){(void)a;(void)b;return 1;}int shareaction(T a,T b,int c,T volume,W*d,int e){(void)c;workShares++;cp(seenName,100,a);cp(seenWhere,260,b);cp(seenVol,72,volume);return cp(d,e,L"sample");}
 int nativeuser(T a,W*b,W*c,int d){(void)a;(void)b;(void)c;(void)d;return 1;}int changepw(T a,W*b,W*c,int d){(void)a;(void)b;(void)c;(void)d;return 1;}int rights(T a,T b,int c,W*d,int e){workRights++;cp(seenName,100,a);cp(seenWho,80,b);wmode=c;return cp(d,e,L"sample");}int firewall(T a,T b,W*c,int d){(void)a;(void)b;(void)c;(void)d;return 1;}
 #else
+int pinroute(Endpoint*e,W*b,int n){(void)e;return cp(b,n,L"test only")&&0;}int route5(const Endpoint*e,W*b,int n){(void)e;return cp(b,n,L"test only")&&0;}
 int getprofile(W*a,int b){(void)a;(void)b;return 0;}int getmap(T a,W*b,int c){(void)a;(void)b;(void)c;return 0;}
 int vpninstall(const Endpoint*a,T b,W*c,W*d,W*e,int f){(void)a;(void)b;(void)c;(void)d;(void)e;(void)f;return 1;}int forgetvpn(W*a,int b){(void)a;(void)b;return 1;}
 int connectnas(const Endpoint*a,int b,W*c,int d){(void)a;(void)c;(void)d;whome=b;return vpnOK;}

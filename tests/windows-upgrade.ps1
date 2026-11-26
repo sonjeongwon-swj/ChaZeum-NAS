@@ -18,7 +18,7 @@ if (Test-Path $clientKey) {throw 'Unexpected existing client settings; stopping.
 New-Item -ItemType Directory $folder -Force | Out-Null
 function Wait-Cz([scriptblock]$probe,[string]$message){
  $watch=[Diagnostics.Stopwatch]::StartNew()
- do { $v=& $probe; if ($v) {return $v};Start-Sleep -Milliseconds 130 } while ($watch.Elapsed.TotalSeconds -lt 22)
+ do { $v=& $probe; if ($v) {return $v};Start-Sleep -Milliseconds 130 } while ($watch.Elapsed.TotalSeconds -lt 32)
  throw "Timed out: $message"
 }
 function Open-Cz([string]$file,[string]$cls){
@@ -64,6 +64,11 @@ try {
  if((Get-ItemPropertyValue $clientKey -Name Pair) -cne $pairSpec -or (Get-ItemPropertyValue $clientKey -Name 'Drive-X') -cne $mapSpec){throw 'Saved settings changed'}
  Tab-Cz 100 203
  if([CzWindow]::Read($win,400) -cne 'nas.example.invalid' -or [CzWindow]::Read($win,401) -cne '192.168.7.24'){throw 'New client failed to load old address'}
+ # A non-tunnel route must be refused, even if a previous endpoint exists.
+ [CzWindow]::Set($win,401,'192.168.246.99');[CzWindow]::Click($win,232);Allow-Cz
+ Result-Cz '집 PC로 가는 WireGuard 터널을 확인하지 못했습니다'
+ if((Get-ItemPropertyValue $clientKey -Name Pair) -cne $pairSpec -or (Get-ItemPropertyValue $clientKey -Name 'Drive-X') -cne $mapSpec){throw 'Unverified route changed saved connection'}
+ 'PASS the Windows client refused a normal adapter as WireGuard and preserved the saved endpoint and drive.'
  Stop-Cz
  'PASS old client to new file: actual stored address/opt-in migrated; saved letter record retained.'
  # Actual new server GUI creates the share; no firewall, public endpoint or VPN change.

@@ -11,8 +11,8 @@ typedef uint32_t U32; typedef int32_t I32; typedef uint16_t U16; typedef uint8_t
 #define SRVKEY L"Software\\ChazeumNAS\\Five\\Server"
 #define CLIKEY L"Software\\ChazeumNAS\\Five\\Client"
 int rootpath(T); H brandicon(H inst,int small);
-#define TITLE_SERVER L"Chazeum-NAS_SERVER 5.0.0.4 · 서버용"
-#define TITLE_CLIENT L"Chazeum-NAS_USER 5.0.0.4 · 유저용"
+#define TITLE_SERVER L"Chazeum-NAS_SERVER 5.0.1.0 · 서버용"
+#define TITLE_CLIENT L"Chazeum-NAS_USER 5.0.1.0 · 유저용"
 #define MARK L"ChaZeumNAS5 network account"
 typedef struct {U32 a; U16 b,c; U8 d[8];} Guid;
 typedef struct {H window; U32 msg; uintptr_t wp; N lp; U32 time; I32 x,y; U32 spare;} Msg;
@@ -57,6 +57,8 @@ extern I32 IsUserAnAdmin(void);
 _Static_assert(sizeof(W)==2 && sizeof(void*)==8 && sizeof(Msg)==48 && sizeof(Class)==80 && sizeof(Cred)==80 && sizeof(Startup)==104 && sizeof(TrustData)==88 && sizeof(User1)==56,"Win64 ABI");
 int sz(T);int cp(W*,int,T);int cat(W*,int,T);int eq(T,T);void erase(void*,size_t);int ipprivate(T);int hostok(T);int machineok(T);int idok(T);int shareok(T);int letterok(T);int pair(T,W*,W*,W*);int invite(W*,int,T,T,T);
 typedef struct {W host[254],ip[16],machine[16];} Endpoint;
+int samehost(T,T); int tailip(T); int securepin(T); int securetarget(T,T);
+int pinroute(Endpoint*,W*,int); int checkpin(const Endpoint*,W*,int);
 int getstr(H,T,T,W*,int);int putstr(H,T,T,T);int delstr(H,T,T);int trusted(void);int loadendpoint(H,T,Endpoint*);int saveendpoint(H,T,const Endpoint*);int validend(const Endpoint*);int errnum(W*,int,T,U32);
 typedef struct {int n;T v[8];} Fields;
 int shellop(T,const Fields*,W*,int);

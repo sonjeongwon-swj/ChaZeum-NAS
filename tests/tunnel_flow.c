@@ -10,6 +10,7 @@ U32 RasEnumConnectionsW(Connection*v,U32*n,U32*c){(void)n;*c=up;v->h=(H)7;cp(v->
 U32 RasGetCredentialsW(T b,T p,RasCred*c){(void)b;(void)p;passreads++;c->mask=3;cp(c->user,CNT(c->user),L"test");cp(c->pass,CNT(c->pass),L"os-opaque-handle");return 0;}
 U32 RasDialW(H a,T b,RasParams*r,U32 d,H e,H*h){(void)a;(void)b;(void)e;(void)d;CHECK(r->size==2128&&eq(r->entry,name)&&eq(r->pass,L"os-opaque-handle"));called++;*h=(H)7;if(faildial)return 691;up=1;return 0;}
 U32 RasHangUpW(H h){(void)h;closecount++;return 0;}void Sleep(U32 n){(void)n;}
+int checkpin(const Endpoint*e,W*out,int c){(void)e;return cp(out,c,L"no approved test tunnel")&&0;}
 int cmdlet(T c,W*out,int n){(void)c;return cp(out,n,forward?L"CZ5-ROUTE":L"no matching route");}int errnum(W*out,int n,T s,U32 e){(void)e;cp(out,n,s);return 0;}
 int _snwprintf(W*b,size_t n,T fmt,...){return cp(b,n,fmt);}
 int main(void){W out[450];CHECK(!guidprofile(L"CZ5-incomplete"));CHECK(!guidprofile(L"CZ5-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;"));CHECK(guidprofile(name));have=0;CHECK(!connectnas(&ep,0,out,CNT(out))&&!called&&!passreads);have=1;addr=0;CHECK(!connectnas(&ep,0,out,CNT(out))&&!called&&!passreads);addr=1;faildial=1;CHECK(!connectnas(&ep,0,out,CNT(out))&&called==1&&closecount==1);faildial=0;forward=0;CHECK(!connectnas(&ep,0,out,CNT(out))&&called==2&&up);forward=1;CHECK(connectnas(&ep,0,out,CNT(out))&&called==2&&passreads==2);EpEnd:;printf("%d VPN profile, authentication, route, reuse checks passed (simulated).\n",count);return 0;}
