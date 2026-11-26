@@ -8,7 +8,7 @@ function Run-Setup($exe){$p=Start-Process $exe -ArgumentList '/VERYSILENT','/SUP
 foreach($role in @('SERVER','USER')){
  $file='Chazeum-NAS_'+$role+'.exe';$base='Chazeum-NAS_'+$role
  $ms=($v.Major -shl 16) -bor $v.Minor;$ls=($v.Build -shl 16) -bor $v.Revision
- & $cc /Qp ("/DRole="+$role) ("/DVer="+$v.ToString()) ("/DVerMS="+$ms) ("/DVerLS="+$ls) ("/DBinPath="+$in) ("/DOutPath="+$out.FullName) 'installer/desktop.iss'
+ & $cc /Qp ("/DCzRole="+$role) ("/DCzVersionText="+$v.ToString()) ("/DCzMajorMinor="+$ms) ("/DCzBuildRev="+$ls) ("/DCzBin="+$in) ("/DCzOutput="+$out.FullName) 'installer/desktop.iss'
  if($LASTEXITCODE -ne 0){throw 'Could not build installer'}
  $setup=Join-Path $out.FullName $file
  $dest=if($role -eq 'SERVER'){Join-Path $env:ProgramFiles 'ChazeumNAS/Server'}else{Join-Path $env:LOCALAPPDATA 'Programs/ChazeumNAS/User'}
