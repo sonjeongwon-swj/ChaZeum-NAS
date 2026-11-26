@@ -25,8 +25,8 @@ with tempfile.TemporaryDirectory() as td:
   exe=t/f'ui-{role}'
   run(['gcc','-std=c11',*flags,'-fshort-wchar','-ffunction-sections','-fdata-sections',f'-DSERVER={role}','-I'+str(R/'src'),'-Wl,--gc-sections',R/'tests/ui_approval.c',R/'src/model.c','-o',exe])
   print(run([exe]))
-pdf=(R/'docs/Guide.pdf').read_bytes();reader=PdfReader(R/'docs/Guide.pdf');assert len(reader.pages)==9 and '아이패드' in reader.pages[4].extract_text()
-assert all('드라이브' in reader.pages[i].extract_text() or '아이디' in reader.pages[i].extract_text() for i in [6,7,8])
+pdf=(R/'docs/Guide.pdf').read_bytes();reader=PdfReader(R/'docs/Guide.pdf');assert len(reader.pages)==5 and '아이패드' in reader.pages[3].extract_text()
+assert all(word in reader.pages[i].extract_text() for i,word in [(0,'폴더'),(1,'권한'),(2,'드라이브'),(3,'파일'),(4,'속도')])
 for s in ['Server','Client']:
  role='SERVER' if s=='Server' else 'USER'; p=O/f'Chazeum-NAS_{role}.exe';b=p.read_bytes();pe=struct.unpack_from('<I',b,60)[0];assert b[:2]==b'MZ' and b[pe:pe+4]==b'PE\0\0'
  machine,sc=struct.unpack_from('<HH',b,pe+4);opt=pe+24;assert machine==0x8664 and struct.unpack_from('<H',b,opt)[0]==0x20b
@@ -44,7 +44,7 @@ for s in ['Server','Client']:
  def resource(typ,lang,ident=1):
   pos=child(child(child(0,typ),ident),lang);r,l=pair(root+pos);return b[off(r):off(r)+l]
  m=ET.fromstring(resource(24,0));level=m.find('.//{urn:schemas-microsoft-com:asm.v3}requestedExecutionLevel');assert level.get('level')==('requireAdministrator' if s=='Server' else 'asInvoker')
- v=resource(16,0x412);idx=v.index(bytes.fromhex('bd04effe'));assert struct.unpack_from('<I',v,idx+8)[0]==0x50000 and struct.unpack_from('<I',v,idx+12)[0]==(1<<16) and '5.0.1.0'.encode('utf-16le') in v
+ v=resource(16,0x412);idx=v.index(bytes.fromhex('bd04effe'));assert struct.unpack_from('<I',v,idx+8)[0]==0x50000 and struct.unpack_from('<I',v,idx+12)[0]==(2<<16) and '5.0.2.0'.encode('utf-16le') in v
  assert p.name.encode('utf-16le') in v
  ico=(R/'brand'/f'{role}.ico').read_bytes();group=resource(14,0,101);assert group[:6]==ico[:6]
  num=struct.unpack_from('<H',ico,4)[0];assert num==9 and len(group)==6+14*num

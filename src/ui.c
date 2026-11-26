@@ -4,6 +4,7 @@
 #include "serverlife.h"
 #else
 #include "client.h"
+#include "serverlife.h"
 #endif
 extern I32 GetWindowTextLengthW(H);
 static H win,inst,font,titlefont,kids[64],field[8],status,nav[6];static int nk,np,busy,verified,lastop;
@@ -80,13 +81,14 @@ static void reportstage(void){
 static H dashboard;
 static void refreshdash(void){W b[640];if(np==5 && dashboard){server_snapshot(b,CNT(b));SetWindowTextW(dashboard,b);}}
 #endif
+#include "home.inc"
 static void page(int p){while(nk)DestroyWindow(kids[--nk]);memset(field,0,sizeof(field));listOnly=0;np=p;
 #if SERVER
 T tabs[]={L"1. 서버 주소",L"2. 공유할 위치",L"3. 아이디·권한",L"4. 연결 확인",L"사용 안내",L"서버 상태"};
 T headings[]={L"집 밖 접속에 쓸 주소",L"드라이브 전체 또는 폴더만 공유",L"누가 어느 폴더를 쓸 수 있나요?",L"접속 상태와 방화벽",L"처음부터 보는 그림 안내",L"내 PC의 파일 공유 상태"};
 T hint[]={L"집 밖 접속용 주소입니다. 집 안에서 폴더를 공유하려면 바로 ‘2. 공유할 위치’로 가세요.",L"드라이브를 고르거나 폴더를 찾아보세요. 폴더 경로를 붙여넣어도 됩니다. 공유 이름은 직접 정하세요.",L"NAS 전용 아이디를 만든 뒤, 아래에서 폴더별로 허용 범위를 정하세요.",L"먼저 기존 설정으로 시험하세요. 필요한 경우에만 사설 주소 범위를 직접 허용하세요.",L"공유기 설정, PC 드라이브 연결, 아이폰·아이패드 파일 앱을 그림으로 설명합니다.",L"파일은 Windows가 공유합니다. 이 창을 닫아도 이미 등록한 공유는 유지됩니다."};
 #else
-T tabs[]={L"1. 서버 주소",L"2. 외부 VPN",L"3. 드라이브",L"4. 확인·자동 연결",L"사용 안내"};
+T tabs[]={L"1. 서버 주소",L"2. 외부 VPN",L"3. 드라이브",L"4. 확인·자동 연결",L"사용 안내",L"내 드라이브"};
 T headings[]={L"내가 연결할 집 PC",L"집 밖에서 집으로 가는 보안 연결",L"탐색기 드라이브 연결",L"자동 연결과 실제 복사 시험",L"처음부터 보는 그림 안내"};
 T hint[]={L"WireGuard·Tailscale을 사용 중이면 NAS 주소와 PC 이름만 입력하고 ‘기존 보안망으로 등록’을 누르세요.",L"기존 WireGuard·Tailscale로 등록했으면 이 단계를 건너뛰세요. 아래는 별도 L2TP/IPsec 방식입니다.",L"서버가 공유한 드라이브나 폴더를 이 PC에서 쓸 빈 문자에 연결하세요. 서버 문자와 달라도 됩니다.",L"등록한 드라이브를 다시 연결하거나, 실제로 파일을 쓰고 읽어 속도를 볼 수 있습니다.",L"아이폰·아이패드에는 별도 파일 관리 앱 없이 기본 파일 앱을 씁니다."};
 #endif
@@ -95,24 +97,18 @@ dashboard=0;
 static const int ord[]={5,0,1,2,3,4};
 for(int k=0;k<6;k++){int i=ord[k];nav[i]=btn(tabs[i],16+k*127,17,122,TABS+i);EnableWindow(nav[i],i!=p);}
 #else
-for(int i=0;i<5;i++){nav[i]=btn(tabs[i],22+i*152,17,145,TABS+i);EnableWindow(nav[i],i!=p);}
+static const int ord[]={5,0,1,2,3,4};for(int k=0;k<6;k++){int i=ord[k];nav[i]=btn(tabs[i],16+k*127,17,122,TABS+i);EnableWindow(nav[i],i!=p);}
 #endif
+if(p==5){easy();updatehome();return;}
 H ttl=label(headings[p],25,71,745,38);SendMessageW(ttl,0x30,(uintptr_t)titlefont,1);label(hint[p],26,114,744,43);
 if(p==0){
 #if SERVER
-line(0,L"공유기 도메인 / 공인 IP",169,0,128);line(1,L"3080 PC 집 안 IP (IPv4)",211,0,15);line(2,L"이 PC의 이름",253,0,15);W host[16];U32 len=16;if(GetComputerNameW(host,&len))pre(2,host);SendMessageW(field[2],0xcf,1,0);pre(0,known.host);pre(1,known.ip);btn(L"내 PC 주소 보기",26,307,158,IPLIST5);btn(L"주소 저장",197,307,142,SAVE);btn(L"접속 정보 복사",354,307,160,COPY);
+line(0,L"공유기 도메인 / 공인 IP",169,0,128);line(1,L"3080 PC 집 안 IP (IPv4)",211,0,15);line(2,L"이 PC의 이름",253,0,15);W host[16];U32 len=16;if(GetComputerNameW(host,&len))pre(2,host);SendMessageW(field[2],0xcf,1,0);pre(0,known.host);pre(1,known.ip);btn(L"내 PC 주소 보기",26,307,158,IPLIST5);btn(L"주소 저장",197,307,142,SAVE);btn(L"접속 정보 복사",354,307,160,COPY);btn(L"연결 정보 복사",527,307,179,GETCARD);
 #else
 line(3,L"서버의 접속 정보",155,0,309);btn(L"입력칸에 채우기",193,192,164,PASTE);line(0,L"도메인 (L2TP만)",237,0,128);line(1,L"NAS PC의 IPv4",278,0,15);line(2,L"서버 PC 이름",319,0,15);pre(0,securepin(known.host)?L"":known.host);pre(1,known.ip);pre(2,known.machine);btn(L"기존 보안망으로 등록",192,362,218,BINDNET);btn(L"서버 주소 저장",425,362,160,SAVE);
 #endif
 }
 #if SERVER
-if(p==5){
- dashboard=widget(L"EDIT",L"",0x10000|0x800|0x4,25,154,738,85,507);refreshdash();
- btn(L"상태 새로 확인",25,254,150,SVCVIEW);btn(L"부팅 때 공유 시작",184,254,184,BOOTSHARE);
- btn(L"수동 시작으로 변경",378,254,176,MANUALSHARE);btn(L"트레이로 숨기기",564,254,182,TOTRAY);
- label(known.host[0]?L"외부 주소: 저장됨  ·  ‘1. 서버 주소’에서 확인할 수 있습니다.":L"외부 주소: 아직 등록하지 않았습니다. 집 안 공유부터 설정할 수 있습니다.",26,311,744,32);
- label(L"PC를 끄거나 절전 상태로 두면 접속할 수 없습니다. 트레이 아이콘을 누르면 이 창이 다시 열립니다.",26,347,737,50);
-}
 if(p==1){
  pickedVolume[0]=0;
  combo(5,L"드라이브 전체",155);loaddrives();btn(L"목록 새로 고침",447,152,153,VOLREFRESH);
@@ -167,22 +163,31 @@ case AUTOOFF:return L"차즘 NAS의 로그인 자동 연결을 해제할까요?"
 case UNMAP:return L"선택한 드라이브 연결과 이 앱이 보관한 해당 암호를 지울까요?";
 case TEST:return L"이 폴더에 새 256 MiB 파일을 쓰고 다시 읽어 전체 내용을 확인한 뒤 지웁니다. 다운로드·업로드 합계 약 512 MiB가 전송됩니다. 시험할까요?";
 default:return 0;}}
+#if SERVER
+static int clientcard(T desired,W*out,int n){W many[1600],pc[16]={0},picked[16]={0};U32 len=16;card[0]=0;if(!GetComputerNameW(pc,&len)||!listip(many,1600)||!machineok(pc))return cp(out,n,L"PC 주소를 확인할 수 없습니다.")&&0;int k=0,match=0;
+ for(W*p=many;*p;){W*q=p;while(*q&&*q!='\r'&&*q!='\n')q++;W fin=*q;*q=0;if(ipprivate(p)||tailip(p)){if(!k)cp(picked,16,p);k++;if(*desired&&eq(desired,p)){match=1;cp(picked,16,p);}}if(!fin)break;p=q+1;while(*p=='\r'||*p=='\n')p++;}
+ if(!k||(!match&&(k>1||*desired)))return cp(out,n,L"주소를 한 개로 정할 수 없습니다. ‘서버 주소 → 내 PC 주소 보기’에서 원하는 PC 주소를 확인하고 입력한 뒤 ‘연결 정보 복사’를 누르세요.")&&0;
+ cp(card,80,L"CZNAS1|");cat(card,80,picked);cat(card,80,L"|");cat(card,80,pc);cp(out,n,L"노트북에는 복사한 연결 정보를 붙여넣으세요. 아이폰·아이패드: 집 보안망에 연결 후 파일 → 둘러보기 → … → 서버에 연결: smb://");cat(out,n,picked);return 1;}
+#else
+static int unpack(T t,Endpoint*e){W b[82];if(!cp(b,82,t))return 0;W*ip=0,*pc=0;for(W*p=b;*p;p++)if(*p=='|'){*p=0;if(!ip)ip=p+1;else if(!pc)pc=p+1;else return 0;}if(!ip||!pc||!eq(b,L"CZNAS1")||(!ipprivate(ip)&&!tailip(ip))||!machineok(pc))return 0;memset(e,0,sizeof(*e));return cp(e->ip,16,ip)&&cp(e->machine,16,pc);}
+#endif
 static U32 dowork(H unused){(void)unused;W *out=message;int cap=CNT(message);int okay=0;out[0]=0;
 #if SERVER
-switch(job.op){case BOOTSHARE:case MANUALSHARE:okay=server_service(job.op==BOOTSHARE,out,cap);break;case SAVE:if(validend(&job.e)&&sz(job.e.host)<=128&&islocal(job.e.ip)&&saveendpoint(HKLM,SRVKEY,&job.e)){known=job.e;okay=cp(out,cap,L"서버 주소를 저장했습니다. ‘접속 정보 복사’로 유저용에 전달할 수 있습니다.");}else cp(out,cap,L"올바른 공유기 도메인(또는 공인 IPv4), 이 PC에 실제 할당된 사설 IPv4를 확인하세요.");break;
+switch(job.op){case GETCARD:okay=clientcard(job.v[1],out,cap);break;case BOOTSHARE:case MANUALSHARE:okay=server_service(job.op==BOOTSHARE,out,cap);break;case SAVE:if(validend(&job.e)&&sz(job.e.host)<=128&&islocal(job.e.ip)&&saveendpoint(HKLM,SRVKEY,&job.e)){known=job.e;okay=cp(out,cap,L"서버 주소를 저장했습니다. ‘접속 정보 복사’로 유저용에 전달할 수 있습니다.");}else cp(out,cap,L"올바른 공유기 도메인(또는 공인 IPv4), 이 PC에 실제 할당된 사설 IPv4를 확인하세요.");break;
 case BYUSER:{extern int byuser(T,W*,int);okay=byuser(job.v[0],out,cap);break;}case IPLIST5:okay=listip(out,cap);break;case LIST:okay=inventory(out,cap);break;case ADD:case REMOVE:okay=shareaction(job.v[1],job.v[0],job.op==REMOVE,job.volume,out,cap);break;case USER:okay=nativeuser(job.v[0],job.v[1],out,cap);break;case PWRESET:{extern int changepw(T,W*,W*,int);okay=changepw(job.v[0],job.v[1],out,cap);break;}case RIGHT:okay=rights(job.v[2],job.v[0],job.choice,out,cap);break;case FWR:okay=firewall(known.ip,job.v[0],out,cap);break;
 case FWLIST:okay=cmdlet(L"Get-NetFirewallRule -Group 'ChaZeum NAS 5' -ErrorAction SilentlyContinue | Get-NetFirewallAddressFilter | ForEach-Object { $_.RemoteAddress }",out,cap);if(okay&&!out[0])cp(out,cap,L"이 앱이 추가한 규칙이 없습니다.");break;case FWDEL:okay=cmdlet(L"Get-NetFirewallRule -Group 'ChaZeum NAS 5' -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'ChaZeumNAS5-*' } | Remove-NetFirewallRule -ErrorAction Stop",out,cap);if(okay)cp(out,cap,L"5.0 방화벽 규칙을 제거했습니다.");break;}
 #else
 switch(job.op){case SHOWNET:okay=route5(&known,out,cap);if(!okay&&!out[0])cp(out,cap,L"등록한 보안 연결이 확인되지 않았습니다.");break;case SAVE:case BINDNET:{if(job.op==BINDNET&&!pinroute(&job.e,out,cap))break;if(job.op==SAVE&&!hostok(job.e.host)){cp(out,cap,L"기존 보안망을 쓰려면 옆의 ‘기존 보안망으로 등록’을 누르세요.");break;}W vpn[48],b[465];int used=getprofile(vpn,CNT(vpn));for(int i=0;i<26&&!used;i++){W d[]={(W)('A'+i),':',0};used=getmap(d,b,CNT(b));}if(used&&(!samehost(known.host,job.e.host)||!eq(known.ip,job.e.ip)||!eq(known.machine,job.e.machine)))cp(out,cap,L"다른 서버로 바꾸려면 기존 드라이브와 이 앱의 VPN을 먼저 해제하세요.");else if(validend(&job.e)&&sz(job.e.host)<=128&&saveendpoint(HKCU,CLIKEY,&job.e)){known=job.e;if(job.op==BINDNET){okay=cat(out,cap,L"\r\n이 PC에 등록했습니다. ‘3. 드라이브’에서 NAS 아이디·암호, 공유와 원하는 문자를 고르세요.");}else okay=cp(out,cap,L"서버 주소를 저장했습니다. 기존 L2TP를 쓸 때는 ‘외부 VPN’을 등록하세요.");}else cp(out,cap,L"공유기 도메인·서버 PC의 사설 IPv4·PC 이름을 확인하세요.");break;}
 case VPN:okay=vpninstall(&known,job.v[0],job.v[1],job.v[2],out,cap);break;case DELVPN:okay=forgetvpn(out,cap);break;
-case MAP:case DISC:if(connectnas(&known,job.home,out,cap)){if(job.op==MAP)okay=mapdrive(&known,job.v[2],job.v[0],job.v[3],job.v[1],1,out,cap);else okay=scanonly(&known,job.v[0],job.v[1],out,cap);}break;
+case MAP:case DISC:if(connectnas(&known,job.home,out,cap)){if(job.op==DISC)okay=scanonly(&known,job.v[0],job.v[1],out,cap);else if(job.v[2][0])okay=mapdrive(&known,job.v[2],job.v[0],job.v[3],job.v[1],1,out,cap);else if(scanonly(&known,job.v[0],job.v[1],out,cap)){int k=selection(out,job.v[2]);if(k==1)okay=mapdrive(&known,job.v[2],job.v[0],job.v[3],job.v[1],1,out,cap);else if(k>1){waiting=1;cat(out,cap,L"원하는 공유를 목록에서 선택하고 드라이브 연결을 누르세요.");}}}break;
 case UNMAP:okay=detach(job.v[3],out,cap);break;case RETRY:okay=restore(out,cap);break;case AUTOON:case AUTOOFF:okay=setstartup(job.op==AUTOON,out,cap);break;case TEST:okay=driveprobe(&known,job.v[0],out,cap);break;}
 #endif
 if(!out[0])cp(out,cap,okay?L"완료했습니다.":L"작업을 마치지 못했습니다. 서버 주소, 권한 및 연결을 확인하세요.");erase(&job,sizeof(job));PostMessageW(win,0x8001,(uintptr_t)okay,0);return 0;}
-static void act(int id){if(busy)return;if(id>=TABS&&id<TABS+(SERVER?6:5)){page(id-TABS);return;}if(id==HELP){W detail[400];makeguide(detail,CNT(detail));speak(detail);return;}
+static void act(int id){if(busy)return;if(id==TOTRAY){if(!tray_hide(win))speak(L"알림 영역에 아이콘을 만들 수 없어 창을 열어 두었습니다.");return;}if(id>=TABS&&id<TABS+6){page(id-TABS);return;}if(id==HELP){W detail[400];makeguide(detail,CNT(detail));speak(detail);return;}
 #if SERVER
-if(id==SVCVIEW){refreshdash();speak(L"이 PC의 파일 공유 서비스와 부팅 설정을 다시 읽었습니다.");return;}
-if(id==TOTRAY){if(!tray_hide(win))speak(L"알림 영역에 아이콘을 만들지 못했습니다. 관리 창을 그대로 표시합니다.");return;}
+if(id==SVCVIEW){updatehome();return;}if(id==ADDPATH){page(1);return;}if(id==ADDID){page(2);return;}
+if(np==5&&id>=CELL&&id<CELL+12){int r=(id-CELL)/3,c=(id-CELL)%3;if(r>=shown.nr||c>=shown.nc)return;W u[21],n[61];cp(u,21,shown.user[c]);cp(n,61,shown.share[r]);int m=shown.mode[r][c];page(2);pre(0,u);pre(2,n);SendMessageW(field[3],0x14e,(uintptr_t)m,0);speak(L"권한을 고른 뒤 ‘권한 저장’을 눌러야 바뀝니다.");return;}
+if(np==5&&id>=PREVR&&id<=NEXTC){if(id==PREVR&&row>=4)row-=4;else if(id==NEXTR&&row+4<shown.totalR)row+=4;else if(id==PREVC&&col>=3)col-=3;else if(id==NEXTC&&col+3<shown.totalC)col+=3;updatehome();return;}
 if(id==VOLREFRESH){if(pickedVolume[0])cleartarget();loaddrives();speak(driveCount?L"드라이브 목록을 새로 확인했습니다. 사용할 드라이브를 선택하세요.":L"공유할 로컬 고정 NTFS 데이터 드라이브가 없습니다. 폴더만 공유할 수도 있습니다.");return;}
 if(id==PICK){W out[260],show[260];Browse b={win,0,show,L"공유할 폴더 하나를 선택하세요. 드라이브 전체는 앞 화면의 목록에서 고릅니다.",0x241,0,0,0};H pid=SHBrowseForFolderW(&b);if(pid){
  SendMessageW(field[5],0x14e,(uintptr_t)-1,0);cleartarget();
@@ -194,6 +199,9 @@ if((id==USER||id==PWRESET)&&field[1]&&!GetWindowTextLengthW(field[1])){
 }
 if(id==COPY){W code[320];if(!invite(code,CNT(code),known.host,known.ip,known.machine))speak(L"먼저 서버 주소를 저장하세요.");else speak(clip(code)?L"접속 정보를 복사했습니다. 유저용 첫 화면에 붙여넣으세요. 암호는 포함되지 않습니다.":L"클립보드 복사 실패");return;}
 #else
+if(np==5&&id==HIDESTATE){int sel=!hiddenMini;if(!putstr(HKCU,CLIKEY,L"HideMini",sel?L"1":L"0")){speak(L"표시 설정을 저장하지 못했습니다.");return;}hiddenMini=sel;ShowWindow(mini,sel?0:5);SetWindowTextW(showbutton,sel?L"현황 보이기":L"현황 숨기기");updatehome();return;}
+if(np==5&&id==MAP&&!validend(&known)){speak(L"먼저 서버에서 복사한 연결 정보를 등록하세요.");return;}
+int bindcard=id==SETCARD;Endpoint parsed={0};if(bindcard){W b[82];if(!val(6,b,82)||!unpack(b,&parsed)){speak(L"서버용의 ‘연결 정보 복사’에서 복사한 정보를 붙여넣으세요.");return;}id=BINDNET;}
 if(id==PASTE){W s[320];Endpoint e;if(val(3,s,CNT(s))&&pair(s,e.host,e.ip,e.machine)&&!securepin(e.host)){pre(0,e.host);pre(1,e.ip);pre(2,e.machine);speak(L"세 칸을 채웠습니다. 내용이 맞으면 ‘서버 주소 저장’을 누르세요.");}else speak(L"CZ5| 로 시작하는 서버의 접속 정보 전체를 넣으세요.");return;}
 #endif
 T warning=confirm(id);if(warning&&!ask(warning))return;memset(&job,0,sizeof(job));job.op=id;lastop=id;
@@ -201,13 +209,19 @@ T warning=confirm(id);if(warning&&!ask(warning))return;memset(&job,0,sizeof(job)
 if(id==ADD)cp(job.volume,CNT(job.volume),pickedVolume);
 #endif
 for(int i=0;i<4;i++)if(field[i]&&!val(i,job.v[i],CNT(job.v[i]))){speak(L"입력값이 너무 깁니다.");erase(&job,sizeof(job));return;}
+#if SERVER
+if(id==GETCARD&&np==5)cp(job.v[1],CNT(job.v[1]),known.ip);
+#else
+waiting=0;if(bindcard)job.e=parsed;else
+#endif
 if(id==SAVE||id==BINDNET){if(!cp(job.e.host,CNT(job.e.host),job.v[0])||!cp(job.e.ip,CNT(job.e.ip),job.v[1])||!cp(job.e.machine,CNT(job.e.machine),job.v[2])){erase(&job,sizeof(job));speak(L"서버 주소 또는 PC 이름의 길이를 확인하세요.");return;}}
-job.choice=field[3]?(int)SendMessageW(field[3],0x147,0,0):-1;job.home=checked(4);if(id==USER||id==PWRESET||id==VPN||id==MAP)pre(1,L"");if(id==VPN)pre(2,L"");busy=1;for(int i=0;i<nk;i++)if(kids[i]!=status)EnableWindow(kids[i],0);speak(L"확인 중입니다…");
+job.choice=field[3]?(int)SendMessageW(field[3],0x147,0,0):-1;job.home=checked(4);if(id==USER||id==PWRESET||id==VPN||(id==MAP&&(np!=5||job.v[2][0])))pre(1,L"");if(id==VPN)pre(2,L"");busy=1;for(int i=0;i<nk;i++)if(kids[i]!=status)EnableWindow(kids[i],0);speak(L"확인 중입니다…");
 #if SERVER
 if(id==ADD||id==REMOVE){stage=0;since=GetTickCount64();reportstage();SetTimer(win,1,2000,0);}
 #endif
 H thread=CreateThread(0,0,dowork,0,0,0);if(thread)CloseHandle(thread);else {erase(&job,sizeof(job));PostMessageW(win,0x8001,0,0);cp(message,CNT(message),L"작업을 시작하지 못했습니다.");}}
 static N proc(H h,U32 m,uintptr_t w,N l){
+if(m==0x8004){donehome();return 0;}if(m==0x113&&w==2){updatehome();return 0;}
 #if SERVER
 if((m==0x8002||(m==0x113&&w==1))&&busy&&(lastop==ADD||lastop==REMOVE)){if(m==0x8002)stage=(unsigned)w;reportstage();return 0;}
 if(m==0x8001&&(lastop==ADD||lastop==REMOVE))KillTimer(h,1);
@@ -216,27 +230,26 @@ if(m==0x111){int i=(int)(w&65535);
 #if SERVER
 if(i==405&&(w>>16)==1&&np==1&&!busy&&field[5]&&(H)l==field[5]){pickwhole();return 0;}
 #endif
-if((w>>16)==0&&((i>=100&&i<100+(SERVER?6:5))||(i>=202&&i<=(SERVER?231:233))))act(i);return 0;}if(m==0x8001){busy=0;for(int i=0;i<nk;i++)EnableWindow(kids[i],1);EnableWindow(nav[np],0);
+if((w>>16)==0&&((i>=100&&i<106)||(i>=202&&i<=233)||(i>=PREVR&&i<=ADDID)||(i>=CELL&&i<CELL+12)))act(i);return 0;}if(m==0x8001){busy=0;for(int i=0;i<nk;i++)EnableWindow(kids[i],1);EnableWindow(nav[np],0);
 #if !SERVER
-if(lastop==BINDNET&&w&&np==0)page(2);
-if(lastop==DISC&&np==2){W copy[12288];if(cp(copy,CNT(copy),message)){W keep[61];val(2,keep,CNT(keep));SendMessageW(field[2],0x14b,0,0);addlines(2,copy,1);pre(2,keep);}}
+if(lastop==BINDNET&&w&&(np==0||np==5))page(5);
+if(lastop==MAP&&np==5&&!waiting)pre(1,L"");
+if((lastop==DISC||waiting)&&(np==2||np==5)){W copy[12288];if(cp(copy,CNT(copy),message)){W keep[61];val(2,keep,CNT(keep));SendMessageW(field[2],0x14b,0,0);addlines(2,copy,1);pre(2,keep);}}
 #endif
-speak(message);
 #if SERVER
-refreshdash();
+if(lastop==GETCARD&&w&&!clip(card))cp(message,CNT(message),L"클립보드 복사 실패");
 #endif
+speak(message);updatehome();
 return 0;}
-#if SERVER
-tray_event(h,m,l);if(m==2)tray_done(h);
-#endif
+tray_event(h,m,l);if(m==2){KillTimer(h,2);tray_done(h);}
 if(m==0x10&&busy){MessageBoxW(h,L"작업이 끝나면 닫을 수 있습니다.",PRODUCT,0x40);return 0;}if(m==2){PostQuitMessage(0);return 0;}return DefWindowProcW(h,m,w,l);}
 void start(void){inst=GetModuleHandleW(0);CoInitializeEx(0,2);verified=trusted();
 #if SERVER
-watchshare(postphase);tray_init();T title=TITLE_SERVER;loadendpoint(HKLM,SRVKEY,&known);
+watchshare(postphase);T title=TITLE_SERVER;loadendpoint(HKLM,SRVKEY,&known);
 #else
 T title=TITLE_CLIENT;loadendpoint(HKCU,CLIKEY,&known);int argc=0;W**av=CommandLineToArgvW(GetCommandLineW(),&argc);int autoRun=av&&argc==2&&eq(av[1],L"/reconnect");if(av)LocalFree(av);if(autoRun){H sync=CreateMutexW(0,1,L"Local\\ChaZeumNAS5Reconnect");if(!sync||GetLastError()==183)ExitProcess(0);W report[3800];Sleep(3000);int ok=restore(report,CNT(report));extern int transient5(void);for(int i=0;!ok&&i<2&&transient5();i++){Sleep(i?20000:7000);ok=restore(report,CNT(report));}putstr(HKCU,CLIKEY,L"LastAuto",report);ReleaseMutex(sync);CloseHandle(sync);ExitProcess(ok?0:1);}
 #endif
-font=CreateFontW(-16,0,0,0,400,0,0,0,1,0,0,5,0,L"Malgun Gothic");if(!font)font=GetStockObject(17);titlefont=CreateFontW(-27,0,0,0,650,0,0,0,1,0,0,5,0,L"Malgun Gothic");if(!titlefont)titlefont=font;Class c={0};c.length=sizeof(c);c.handler=proc;c.instance=inst;c.brush=(H)16;c.cursor=LoadCursorW(0,(T)(N)32512);c.icon=brandicon(inst,0);c.small=brandicon(inst,1);c.cls=SERVER?L"ChazeumNAS5Server":L"ChazeumNAS5Client";if(!RegisterClassExW(&c))ExitProcess(3);win=CreateWindowExW(0,c.cls,title,0x00ca0000,(int)0x80000000,(int)0x80000000,810,644,0,0,inst,0);if(!win)ExitProcess(4);page(SERVER?5:(validend(&known)?2:0));ShowWindow(win,5);UpdateWindow(win);
+font=CreateFontW(-16,0,0,0,400,0,0,0,1,0,0,5,0,L"Malgun Gothic");if(!font)font=GetStockObject(17);titlefont=CreateFontW(-27,0,0,0,650,0,0,0,1,0,0,5,0,L"Malgun Gothic");if(!titlefont)titlefont=font;Class c={0};c.length=sizeof(c);c.handler=proc;c.instance=inst;c.brush=(H)16;c.cursor=LoadCursorW(0,(T)(N)32512);c.icon=brandicon(inst,0);c.small=brandicon(inst,1);c.cls=SERVER?L"ChazeumNAS5Server":L"ChazeumNAS5Client";if(!RegisterClassExW(&c))ExitProcess(3);win=CreateWindowExW(0,c.cls,title,0x00ca0000,(int)0x80000000,(int)0x80000000,810,644,0,0,inst,0);if(!win)ExitProcess(4);tray_init();page(5);SetTimer(win,2,15000,0);ShowWindow(win,5);UpdateWindow(win);
 #if !SERVER
 if(startup_legacy()&&MessageBoxW(win,L"이전 버전의 로그인 자동 연결이 켜져 있습니다. 앞으로는 지금 연 유저용 파일을 사용하도록 바꿀까요? 기존 드라이브와 계정은 유지됩니다.",TITLE_CLIENT,0x124)==6){
  W result[500];setstartup(1,result,CNT(result));cp(message,CNT(message),result);speak(message);}

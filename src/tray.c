@@ -8,7 +8,7 @@ static U32 taskbar;static int hidden;
 static int iconop(H h,U32 op){
  NotifyIcon n={0};n.size=sizeof(n);n.hwnd=h;n.id=1;
  if(!op){n.flags=1|2|4;n.event=CZ_TRAY_EVENT;n.icon=brandicon(GetModuleHandleW(0),1);
-  if(!n.icon)return 0;cp(n.tip,CNT(n.tip),L"Chazeum-NAS_SERVER · 서버 관리 창 열기");}
+  if(!n.icon)return 0;cp(n.tip,CNT(n.tip),L"차즘 NAS · 창 다시 열기");}
  return Shell_NotifyIconW(op,&n);
 }
 void tray_init(void){taskbar=RegisterWindowMessageW(L"TaskbarCreated");}

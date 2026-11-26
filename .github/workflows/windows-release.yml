@@ -93,7 +93,7 @@ jobs:
           '@
           $roles = @(
             @{ exe='Chazeum-NAS_SERVER.exe'; role='서버용'; button='부팅 때 공유 시작' },
-            @{ exe='Chazeum-NAS_USER.exe'; role='유저용'; button='서버 주소 저장' }
+            @{ exe='Chazeum-NAS_USER.exe'; role='유저용'; button='드라이브 연결' }
           )
           foreach ($item in $roles) {
             $title = "$([IO.Path]::GetFileNameWithoutExtension($item.exe)) $env:PRODUCT_VERSION · $($item.role)"

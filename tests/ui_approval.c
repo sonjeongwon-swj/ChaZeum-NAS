@@ -48,13 +48,15 @@ H CreateFontW(I32 a,I32 b,I32 c,I32 d,I32 e,U32 f,U32 g,U32 h,U32 i,U32 j,U32 k,
 H LoadCursorW(H a,T b){(void)a;(void)b;return (H)1;}U16 RegisterClassExW(Class*a){(void)a;return 1;}
 I32 ShowWindow(H a,I32 b){(void)a;(void)b;return 1;}I32 UpdateWindow(H a){(void)a;return 1;}I32 GetMessageW(Msg*a,H b,U32 c,U32 d){(void)a;(void)b;(void)c;(void)d;return 0;}I32 IsDialogMessageW(H a,Msg*b){(void)a;(void)b;return 0;}I32 TranslateMessage(Msg*a){(void)a;return 1;}N DispatchMessageW(Msg*a){(void)a;return 0;}N DefWindowProcW(H a,U32 b,uintptr_t c,N d){(void)a;(void)b;(void)c;(void)d;return 0;}void PostQuitMessage(I32 a){(void)a;}
 void ExitProcess(U32 c){quitcode=c;longjmp(escape,1);}
+void tray_init(void){}void tray_done(H h){(void)h;}void tray_event(H h,U32 m,N l){(void)h;(void)m;(void)l;}int tray_hide(H h){(void)h;return 0;}
 #if SERVER
+void readboard(Board*b,int r,int c){(void)r;(void)c;memset(b,0,sizeof(*b));}
 static int settingCalls,lastMode;void watchshare(void (*fn)(unsigned)){(void)fn;}
 U64 GetTickCount64(void){return 1000;}
 uintptr_t SetTimer(H a,uintptr_t b,U32 c,H d){(void)a;(void)c;(void)d;return b;}
 I32 KillTimer(H a,uintptr_t b){(void)a;(void)b;return 1;}
 int server_snapshot(W*b,int n){return cp(b,n,L"test snapshot");}int server_service(int mode,W*b,int n){settingCalls++;lastMode=mode;return cp(b,n,L"test result");}
-void tray_init(void){}void tray_done(H h){(void)h;}void tray_event(H h,U32 m,N l){(void)h;(void)m;(void)l;}int tray_hide(H h){(void)h;return 0;}
+
 int choices(int a,W*b,int c){(void)a;return cp(b,c,L"");}int byuser(T a,W*b,int c){(void)a;(void)b;(void)c;return 1;}
 static T chosenFolder;
 int datavolumes(VolumePick*r,int cap){if(cap<2)return 0;cp(r[0].root,4,L"D:\\");cp(r[0].id,72,L"vol-D");cp(r[0].label,64,L"자료");cp(r[1].root,4,L"F:\\");cp(r[1].id,72,L"vol-F");cp(r[1].label,64,L"백업");return 2;}
@@ -64,11 +66,14 @@ int listip(W*a,int b){(void)a;(void)b;return 1;}int islocal(T a){(void)a;return 
 int inventory(W*a,int b){(void)a;(void)b;return 1;}int shareaction(T a,T b,int c,T volume,W*d,int e){(void)c;workShares++;cp(seenName,100,a);cp(seenWhere,260,b);cp(seenVol,72,volume);return cp(d,e,L"sample");}
 int nativeuser(T a,W*b,W*c,int d){(void)a;(void)b;(void)c;(void)d;return 1;}int changepw(T a,W*b,W*c,int d){(void)a;(void)b;(void)c;(void)d;return 1;}int rights(T a,T b,int c,W*d,int e){workRights++;cp(seenName,100,a);cp(seenWho,80,b);wmode=c;return cp(d,e,L"sample");}int firewall(T a,T b,W*c,int d){(void)a;(void)b;(void)c;(void)d;return 1;}
 #else
+uintptr_t SetTimer(H a,uintptr_t b,U32 c,H d){(void)a;(void)c;(void)d;return b;}
+I32 KillTimer(H a,uintptr_t b){(void)a;(void)b;return 1;}
+int mapstatus(const Endpoint*e,W*b,int n){(void)e;return cp(b,n,L"test");}static int offeredCount;
 int pinroute(Endpoint*e,W*b,int n){(void)e;return cp(b,n,L"test only")&&0;}int route5(const Endpoint*e,W*b,int n){(void)e;return cp(b,n,L"test only")&&0;}
 int getprofile(W*a,int b){(void)a;(void)b;return 0;}int getmap(T a,W*b,int c){(void)a;(void)b;(void)c;return 0;}
 int vpninstall(const Endpoint*a,T b,W*c,W*d,W*e,int f){(void)a;(void)b;(void)c;(void)d;(void)e;(void)f;return 1;}int forgetvpn(W*a,int b){(void)a;(void)b;return 1;}
 int connectnas(const Endpoint*a,int b,W*c,int d){(void)a;(void)c;(void)d;whome=b;return vpnOK;}
-int mapdrive(const Endpoint*a,T b,T c,T d,W*e,int f,W*g,int h){(void)a;CHECK(f==1&&eq(e,L"sample-only"));workMaps++;cp(seenName,100,b);cp(seenWho,80,c);cp(seenLetter,5,d);return cp(g,h,L"sample");}int scanonly(const Endpoint*a,T b,T c,W*d,int e){(void)a;(void)b;(void)c;(void)d;(void)e;return 1;}
+int mapdrive(const Endpoint*a,T b,T c,T d,W*e,int f,W*g,int h){(void)a;CHECK(f==1&&eq(e,L"sample-only"));workMaps++;cp(seenName,100,b);cp(seenWho,80,c);cp(seenLetter,5,d);return cp(g,h,L"sample");}int scanonly(const Endpoint*a,T b,T c,W*d,int e){(void)a;(void)b;(void)c;return cp(d,e,offeredCount==1?L"이 아이디로 열 수 있는 폴더:\r\n • 자료창고\r\n":L"이 아이디로 열 수 있는 폴더:\r\n • 자료창고\r\n • 사진\r\n");}
 int detach(T a,W*b,int c){(void)a;(void)b;(void)c;return 1;}int restore(W*a,int b){runs++;return cp(a,b,L"restored");}int startup_legacy(void){return 0;}int setstartup(int a,W*b,int c){(void)a;(void)b;(void)c;return 1;}
 int driveprobe(const Endpoint*a,T b,W*c,int d){(void)a;(void)b;(void)c;(void)d;return 1;}
 W*GetCommandLineW(void){return L"client.exe /reconnect";}W**CommandLineToArgvW(T a,I32*n){(void)a;static W*v[]={L"client.exe",L"/reconnect"};*n=autoreconnect?2:1;return v;}H LocalFree(H a){(void)a;return 0;}
@@ -86,6 +91,7 @@ chosenFolder=L"D:\\";act(PICK);CHECK(!textfield[0][0]&&!pickedVolume[0]);q0=queu
 volRow=0;pickwhole();act(VOLREFRESH);CHECK(volRow==-1&&!textfield[0][0]&&!pickedVolume[0]); /* Explicit refresh invalidates whole-disk selection. */
 pre(1,L"only-test");testclick(REMOVE);testclick(USER);pre(1,L"only-test");testclick(PWRESET);testclick(RIGHT);testclick(FWR);testclick(FWDEL);page(2);pre(0,L"demo");pre(2,L"자료창고");
 for(int z=0;z<=2;z++){SendMessageW(field[3],0x14e,z,0);act(RIGHT);dowork(0);busy=0;CHECK(workRights==z+1&&wmode==z&&eq(seenWho,L"demo")&&eq(seenName,L"자료창고"));}
+page(5);shown.nc=shown.nr=1;cp(shown.user[0],21,L"demo");cp(shown.share[0],61,L"자료창고");shown.mode[0][0]=1;int prev=workRights;act(CELL);CHECK(np==2&&eq(textfield[0],L"demo")&&eq(textfield[2],L"자료창고")&&selected[3]==1&&workRights==prev);
 if(!setjmp(escape))start();CHECK(np==5&&quitcode==0); /* startup displays real status before any change */
 testclick(BOOTSHARE);testclick(MANUALSHARE);act(BOOTSHARE);dowork(0);busy=0;CHECK(settingCalls==1&&lastMode==1);act(MANUALSHARE);dowork(0);busy=0;CHECK(settingCalls==2&&lastMode==0);
 #else
@@ -93,6 +99,10 @@ testclick(VPN);testclick(DELVPN);testclick(MAP);testclick(UNMAP);testclick(AUTOO
 page(2);pre(0,L"demo");pre(2,L"자료창고");SendMessageW(field[3],0x14e,23,0);
 pre(1,L"sample-only");vpnOK=0;act(MAP);dowork(0);busy=0;CHECK(!workMaps&&!whome);
 for(int z=0;z<2;z++){vpnOK=1;SendMessageW(field[3],0x14e,23+z,0);pre(1,L"sample-only");act(MAP);dowork(0);busy=0;CHECK(workMaps==z+1&&eq(seenLetter,z?L"Y:":L"X:")&&eq(seenWho,L"demo")&&eq(seenName,L"자료창고")&&!textfield[1][0]);}
+cp(known.host,254,L"home.example.net");cp(known.ip,16,L"192.168.1.25");cp(known.machine,16,L"NASBOX");page(5);pre(0,L"demo");pre(1,L"sample-only");SendMessageW(field[3],0x14e,23,0);
+int prior=workMaps;act(MAP);dowork(0);proc(0,0x8001,0,0);CHECK(waiting&&workMaps==prior&&countSel[2]==2&&eq(textfield[1],L"sample-only"));
+offeredCount=1;act(MAP);dowork(0);proc(0,0x8001,1,0);CHECK(!waiting&&workMaps==prior+1&&eq(seenName,L"자료창고")&&!textfield[1][0]);
+Endpoint c;CHECK(unpack(L"CZNAS1|192.168.1.25|NASBOX",&c)&&!c.host[0]);CHECK(!unpack(L"CZNAS1|8.8.8.8|NASBOX",&c)&&!unpack(L"CZNAS1|10.1.0.3|NAS|extra",&c));
 autoreconnect=1;if(!setjmp(escape))start();CHECK(runs==1&&quitcode==0);
 #endif
 printf("%d actual UI approval/dispatch checks passed for %s (Windows APIs simulated).\n",assertions,SERVER?"server":"client");return 0;

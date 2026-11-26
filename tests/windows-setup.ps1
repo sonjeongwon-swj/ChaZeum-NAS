@@ -26,6 +26,6 @@ foreach($role in @('SERVER','USER')){
    if((Get-FileHash $app).Hash -cne (Get-FileHash (Join-Path $in $file)).Hash -or (Get-ItemPropertyValue $hive Pair) -cne $pair){throw 'Reinstall lost executable or settings'}
    Run-Setup (Join-Path $dest 'unins000.exe')
    if((Test-Path $app) -or (Test-Path $link) -or (Get-ItemPropertyValue $hive Pair) -cne $pair){throw 'Uninstall lost settings or left app'}
-   "PASS $role: install, signed-payload-ready byte identity, Start menu, reinstall retaining settings, uninstall retaining settings"
+   "PASS ${role}: install, identical executable bytes, Start menu, reinstall retaining settings, uninstall retaining settings"
  } finally {if(Test-Path $hive){Remove-Item -LiteralPath $hive -Recurse}}
 }

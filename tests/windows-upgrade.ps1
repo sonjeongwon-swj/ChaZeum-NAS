@@ -16,6 +16,8 @@ $runKey='HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $oldPair=Join-Path $tempDir 'Chazeum-NAS_USER.exe'
 if (Test-Path $clientKey) {throw 'Unexpected existing client settings; stopping.'}
 New-Item -ItemType Directory $folder -Force | Out-Null
+$existing=Join-Path $folder 'existing-data.bin';[IO.File]::WriteAllBytes($existing,[byte[]](0..255))
+$hash=(Get-FileHash -LiteralPath $existing).Hash
 function Wait-Cz([scriptblock]$probe,[string]$message){
  $watch=[Diagnostics.Stopwatch]::StartNew()
  do { $v=& $probe; if ($v) {return $v};Start-Sleep -Milliseconds 130 } while ($watch.Elapsed.TotalSeconds -lt 32)
@@ -75,7 +77,8 @@ try {
  $server=(Resolve-Path 'unsigned/Chazeum-NAS_SERVER.exe').Path
  if((Get-Service LanmanServer).Status -ne 'Running'){Start-Service LanmanServer}
  Open-Cz $server 'ChazeumNAS5Server';Control-Cz 507
- if([CzWindow]::Read($win,507) -notmatch '실행 중' -or [CzWindow]::ClassLong($win,-14) -eq [IntPtr]::Zero -or [CzWindow]::ClassLong($win,-34) -eq [IntPtr]::Zero){throw 'Service state or icons missing'}
+ $null=Wait-Cz { [CzWindow]::Read($win,507) -match '실행 중' } 'native service status'
+ if([CzWindow]::ClassLong($win,-14) -eq [IntPtr]::Zero -or [CzWindow]::ClassLong($win,-34) -eq [IntPtr]::Zero){throw 'Service state or icons missing'}
  Tab-Cz 101 206;[CzWindow]::Set($win,400,$folder);[CzWindow]::Set($win,401,$share)
  [CzWindow]::Click($win,206);Allow-Cz;Result-Cz '폴더를 공유했습니다';$registered=$true
  $s=Get-SmbShare -Name $share
@@ -91,7 +94,9 @@ try {
  [CzWindow]::Click($win,209);Allow-Cz;Result-Cz '권한을 저장했습니다'
  $acl=(Get-Acl $folder).Sddl
  Tab-Cz 105 507
- if([CzWindow]::Read($win,507) -notmatch '등록한 공유: [1-9]'){throw 'New share not counted'}
+ $null=Wait-Cz { [CzWindow]::Read($win,507) -match '등록한 공유: [1-9]' -and [CzWindow]::Read($win,550) -ceq $nasId -and [CzWindow]::Read($win,560).Contains($share) -and [CzWindow]::Read($win,610) -ceq '읽기' } 'live read-only cell for the correct account and share'
+ [CzWindow]::Click($win,610);Control-Cz 209
+ if([CzWindow]::Read($win,400) -cne $nasId -or [CzWindow]::Read($win,402) -cne $share){throw 'Grid preselected wrong account or share'}
  Stop-Cz
  $unc="\\$pcName\$share\check.txt"
  $marker=[Guid]::NewGuid().ToString()
@@ -125,6 +130,8 @@ try {
  Tab-Cz 101 207;[CzWindow]::Set($win,401,$share);[CzWindow]::Click($win,207);Allow-Cz
  $null=Wait-Cz { -not (Get-SmbShare -Name $share -ErrorAction SilentlyContinue) } 'remove temporary share'
  Stop-Cz;$registered=$false
+ if((Get-FileHash -LiteralPath $existing).Hash -cne $hash){throw 'Pre-existing data changed during sharing'}
+ 'PASS original file contents preserved after creating and removing the share, permission changes and replacing the manager.'
 } finally {
  if($null -ne $app){if(-not $app.HasExited){$app.Kill();$app.WaitForExit()};$app.Dispose()}
  if($registered -and (Get-SmbShare -Name $share -ErrorAction SilentlyContinue)){Remove-SmbShare -Name $share -Force}

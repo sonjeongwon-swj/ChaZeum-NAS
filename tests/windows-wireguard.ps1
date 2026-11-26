@@ -81,11 +81,12 @@ try {
     if ($route.Count -ne 1 -or $route[0].InterfaceIndex -ne $adapter.ifIndex -or $route[0].DestinationPrefix -ne "$homeIP/32") {throw 'Fixture host route not selected'}
     $app=Start-Process $exe -PassThru
     $win=Wait-Fixture { $h=[CzWindow]::FindOwned($app.Id,'ChazeumNAS5Client');if($h -ne [IntPtr]::Zero){$h} } 'client main window'
-    [CzWindow]::Set($win,401,$homeIP);[CzWindow]::Set($win,402,'TEST-NAS')
-    [CzWindow]::Click($win,232)
+    $null=Wait-Fixture { [CzWindow]::GetDlgItem($win,406) -ne [IntPtr]::Zero } 'server card field'
+    [CzWindow]::Set($win,406,('CZNAS1|'+$homeIP+'|TEST-NAS'))
+    [CzWindow]::Click($win,246)
     $dialog=Wait-Fixture { $h=[CzWindow]::GetLastActivePopup($win);if($h -ne $win -and $h -ne [IntPtr]::Zero -and [CzWindow]::GetDlgItem($h,6) -ne [IntPtr]::Zero){$h} } 'confirmation'
     [CzWindow]::Click($dialog,6)
-    $null=Wait-Fixture { [CzWindow]::GetDlgItem($win,216) -ne [IntPtr]::Zero } 'automatic navigation to drive selection'
+    $null=Wait-Fixture { [CzWindow]::GetDlgItem($win,216) -ne [IntPtr]::Zero -and [CzWindow]::GetDlgItem($win,406) -eq [IntPtr]::Zero } 'automatic navigation to drive selection'
     $saved=Get-ItemPropertyValue $store Pair
     if($saved -cne ('CZ5T|@WG:'+$guid+'|'+$homeIP+'|TEST-NAS')){throw 'The GUI did not save the actual tunnel identity'}
     'PASS unmodified user EXE: saved the actual WireGuard adapter and opened drive selection without a domain.'

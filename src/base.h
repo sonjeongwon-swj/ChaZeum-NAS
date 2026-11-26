@@ -11,8 +11,8 @@ typedef uint32_t U32; typedef int32_t I32; typedef uint16_t U16; typedef uint8_t
 #define SRVKEY L"Software\\ChazeumNAS\\Five\\Server"
 #define CLIKEY L"Software\\ChazeumNAS\\Five\\Client"
 int rootpath(T); H brandicon(H inst,int small);
-#define TITLE_SERVER L"Chazeum-NAS_SERVER 5.0.1.0 · 서버용"
-#define TITLE_CLIENT L"Chazeum-NAS_USER 5.0.1.0 · 유저용"
+#define TITLE_SERVER L"Chazeum-NAS_SERVER 5.0.2.0 · 서버용"
+#define TITLE_CLIENT L"Chazeum-NAS_USER 5.0.2.0 · 유저용"
 #define MARK L"ChaZeumNAS5 network account"
 typedef struct {U32 a; U16 b,c; U8 d[8];} Guid;
 typedef struct {H window; U32 msg; uintptr_t wp; N lp; U32 time; I32 x,y; U32 spare;} Msg;
